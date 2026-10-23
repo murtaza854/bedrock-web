@@ -1,0 +1,11 @@
+/node_modules
+# Next.js build folders (day-to-day, and the two used by the end-to-end tests)
+/.next*
+# end-to-end test output
+/test-results
+/playwright-report
+# generated
+tsconfig.tsbuildinfo
+next-env.d.ts
+# local settings, such as where the API runs
+.env*.local
