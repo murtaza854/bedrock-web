@@ -95,9 +95,9 @@ export default function Plots() {
         </thead>
         <tbody>
           {shown.map((p) => (
-            <tr key={p.id} className={`border-b border-line hover:bg-line/30 ${p.status === "rejected" ? "opacity-50" : ""}`}>
+            <tr key={p.id} className={`relative cursor-pointer border-b border-line hover:bg-line/30 ${p.status === "rejected" ? "opacity-50" : ""}`}>
               <td className="py-3">
-                <Link href={`/dashboard/plots/${p.id}`} className="font-medium">{label(p)}</Link>
+                <Link href={`/dashboard/plots/${p.id}`} className="font-medium after:absolute after:inset-0">{label(p)}</Link>
                 {p.street && <p className="text-xs text-muted">{p.street}</p>}
               </td>
               <td className="pl-6 text-right">{p.size_sqyd ? `${p.size_sqyd} sq yd` : <span className="text-muted">-</span>}</td>
@@ -107,11 +107,11 @@ export default function Plots() {
               <td className="pl-6 text-right">{ppsy(p) ? Math.round(ppsy(p)!).toLocaleString() : <span className="text-muted">-</span>}</td>
               <td className="pl-6 text-right">{p.n ?? 0}</td>
               <td className="pl-6 text-right">{p.spread != null && <Badge tone={p.spread >= spreadAlert / 100 ? "bad" : "neutral"}>{Math.round(p.spread * 100)}%</Badge>}</td>
-              <td className="pl-4">
+              <td className="relative pl-4">
                 <Select label={`Status of ${label(p)}`} variant="ghost" value={p.status} onChange={(v) => changeStatus(p, v)}
                   options={STATUSES.map((v) => ({ value: v, label: v[0].toUpperCase() + v.slice(1), dot: DOT[v] }))} />
               </td>
-              <td className="pl-4 text-right"><Link href={`/dashboard/plots/${p.id}/edit`} className="text-xs text-muted hover:text-ink">Edit</Link></td>
+              <td className="relative pl-4 text-right"><Link href={`/dashboard/plots/${p.id}/edit`} className="text-xs text-muted hover:text-ink">Edit</Link></td>
             </tr>
           ))}
           {!shown.length && (

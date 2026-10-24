@@ -24,6 +24,7 @@ test.describe("Add plot: area list", () => {
     await area.press("Escape");
     await page.locator('input[name="plot_no"]').fill("N-1");
     await page.getByRole("button", { name: "Add plot" }).click();
+    await page.getByRole("link", { name: "Skip all" }).click();
     await expect(page).toHaveURL(/\/dashboard\/plots$/);
 
     const plots = await (await page.request.get(`${API}/plots`)).json();
@@ -74,5 +75,51 @@ test.describe("Location pin", () => {
     await expect(page).toHaveURL(/\/dashboard\/plots$/);
     const saved = await (await page.request.get(`${API}/plots/${p.id}`)).json();
     expect([saved.plot.gps_lat, saved.plot.gps_lon, saved.plot.size_sqyd]).toEqual([24.81, 67.06, 500]);
+  });
+});
+
+test.describe("Plot list", () => {
+  test("clicking anywhere on a row opens the plot, but Edit still opens the editor", async ({ page, plot }) => {
+    const p = await plot({ area: "Row Click Town" });
+    await page.goto("/dashboard/plots");
+    await page.getByPlaceholder("Search plot, sector, street").fill("Row Click Town");
+    const row = page.getByRole("row", { name: /Row Click Town/ });
+    await row.getByRole("cell").nth(1).click({ force: true }); // the size cell, nowhere near the name (force: the row link overlays it, which is the point)
+    await expect(page).toHaveURL(new RegExp(`/dashboard/plots/${p.id}$`));
+    await page.goBack();
+    await page.getByPlaceholder("Search plot, sector, street").fill("Row Click Town");
+    await row.getByRole("link", { name: "Edit" }).click();
+    await expect(page).toHaveURL(new RegExp(`/dashboard/plots/${p.id}/edit$`));
+  });
+});
+
+test.describe("Add plot: setup steps", () => {
+  test("after adding, quotes, facts, a task and an offer can each be added or skipped", async ({ page }) => {
+    await page.goto("/dashboard/plots/new");
+    await page.getByRole("combobox", { name: "Area" }).fill("Wizard Town");
+    await page.getByRole("combobox", { name: "Area" }).press("Escape");
+    await page.locator('input[name="plot_no"]').fill("W-1");
+    await page.locator('input[name="size"]').fill("400");
+    await page.getByRole("button", { name: "Add plot" }).click();
+    await expect(page.getByRole("heading", { name: "Quotes" })).toBeVisible();
+    await page.getByPlaceholder("Broker", { exact: true }).fill("Ali");
+    await page.getByPlaceholder("Price (PKR)").fill("620000000");
+    await page.getByRole("button", { name: "Save quote" }).click();
+    await expect(page.getByText("Saved: Ali")).toBeVisible();
+    await page.getByRole("button", { name: "Next" }).click();
+    await expect(page.getByRole("heading", { name: "Facts" })).toBeVisible();
+    await page.getByRole("button", { name: "Skip" }).click(); // nothing added here
+    await page.getByPlaceholder("What needs doing?").fill("Visit the plot");
+    await page.getByRole("button", { name: "Save task" }).click();
+    await expect(page.getByText("Saved: Visit the plot")).toBeVisible();
+    await page.getByRole("button", { name: "Next" }).click();
+    await page.getByPlaceholder("Broker or owner").fill("Ali");
+    await page.getByPlaceholder("Amount (PKR)").fill("600000000");
+    await page.getByRole("button", { name: "Save offer" }).click();
+    await expect(page.getByText(/Saved: Ali, /)).toBeVisible();
+    await page.getByRole("link", { name: "Finish" }).click();
+    await expect(page.getByRole("heading", { name: /Wizard Town/ })).toBeVisible();
+    await expect(page.getByText("Ali", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Visit the plot")).toBeVisible();
   });
 });

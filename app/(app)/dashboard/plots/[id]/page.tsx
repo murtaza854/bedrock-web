@@ -4,9 +4,8 @@ import { use, useEffect, useState } from "react";
 import { get, patch, pkr, post } from "@/lib/api";
 import { DOT, STATUSES, cap, label, ppsy } from "@/lib/plots";
 import { Badge, levelTone } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Errors, Field, required } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
+import { ClaimForm, LEVELS, QuoteForm } from "@/components/quote-claim-forms";
 import { RejectDialog } from "@/components/reject-dialog";
 import { PurchaseDialog } from "@/components/purchase-dialog";
 import { PurchaseSummary } from "@/components/purchase-summary";
@@ -19,8 +18,6 @@ import { LocationSummary } from "@/components/location-summary";
 import { canSeeMoney, useMe } from "@/lib/auth";
 import { useSettings } from "@/lib/settings";
 
-const QUOTE_TYPES = ["asking", "negotiable", "owner_confirmed", "buyer_confirmed", "transacted"];
-const LEVELS = ["claimed", "ai_unverified", "site_verified", "document_verified", "authority_confirmed"]; // weakest to strongest
 const fmt = (n: number) => Math.round(n).toLocaleString();
 const day = (d: string) => new Date(d).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 
@@ -52,7 +49,6 @@ export default function Plot({ params }: { params: Promise<{ id: string }> }) {
   const [d, setD] = useState<any>(null);
   const [all, setAll] = useState<any[]>([]);
   const [form, setForm] = useState<"quote" | "claim" | null>(null);
-  const [errors, setErrors] = useState<Errors>({});
   const [rejecting, setRejecting] = useState<any>(null);
   const [buying, setBuying] = useState<any>(null);
   const [statusErr, setStatusErr] = useState("");
@@ -61,20 +57,7 @@ export default function Plot({ params }: { params: Promise<{ id: string }> }) {
   // arriving from an accepted offer: /plots/1?buy=1 opens the purchase form
   useEffect(() => { if (d && canSeeMoney(me?.role) && new URLSearchParams(location.search).get("buy") === "1" && d.plot.status !== "bought") setBuying(d.plot); }, [d?.plot?.id, me?.role]);
 
-  const submit = (kind: "quote" | "claim", rules: Errors) => async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const el = e.currentTarget;
-    const f: any = Object.fromEntries(new FormData(el));
-    const err = required(f, rules);
-    if (f.price_pkr && !(Number(f.price_pkr) > 0)) err.price_pkr = "Price must be above zero";
-    setErrors(err);
-    if (Object.keys(err).length) return;
-    if (f.price_pkr) f.price_pkr = Number(f.price_pkr);
-    try { await post(`/plots/${id}/${kind}s`, f); }
-    catch { return setErrors({ form: "Could not save, try again" }); }
-    setForm(null); load();
-  };
-  const toggle = (k: "quote" | "claim") => { setErrors({}); setForm(form === k ? null : k); };
+  const toggle = (k: "quote" | "claim") => setForm(form === k ? null : k);
   const changeStatus = async (s: string) => {
     if (s === "rejected") return setRejecting(d.plot);
     if (s === "bought") return setBuying(d.plot);
@@ -139,16 +122,7 @@ export default function Plot({ params }: { params: Promise<{ id: string }> }) {
       {money && <PurchaseSummary plot={p} onChange={load} />}
 
       <Section title="Quotes" note={`${quotes.length}`} action={<Add open={form === "quote"} onClick={() => toggle("quote")}>Add quote</Add>}>
-        {form === "quote" && (
-          <form onSubmit={submit("quote", { broker: "Enter the broker", price_pkr: "Enter a price" })} noValidate className="mb-6 grid items-start gap-3 md:grid-cols-5">
-            <Field name="broker" placeholder="Broker" error={errors.broker} autoFocus />
-            <Select name="quote_type" label="Quote type" defaultValue="asking" options={QUOTE_TYPES.map((t) => ({ value: t, label: cap(t) }))} />
-            <Field name="price_pkr" type="number" placeholder="Price (PKR)" error={errors.price_pkr} />
-            <Field name="inclusions" placeholder="Inclusions" />
-            <Button>Save quote</Button>
-            {errors.form && <p role="alert" className="text-sm text-red-500 md:col-span-5">{errors.form}</p>}
-          </form>
-        )}
+        {form === "quote" && <div className="mb-6"><QuoteForm plotId={id} onSaved={() => { setForm(null); load(); }} /></div>}
         {quotes.length ? (
           <table className="w-full text-sm">
             <thead><tr className="text-xs font-normal text-muted"><th className="pb-2 text-left font-normal">Broker</th><th className="pb-2 text-left font-normal">Type</th><th className="pb-2 text-right font-normal">Price</th><th className="pb-2 text-right font-normal">Per sq yd</th><th className="pb-2 pl-6 text-left font-normal">Inclusions</th><th className="pb-2 text-right font-normal">Date</th></tr></thead>
@@ -166,16 +140,7 @@ export default function Plot({ params }: { params: Promise<{ id: string }> }) {
       </Section>
 
       <Section title="Facts" note="best-supported claim per field" action={<Add open={form === "claim"} onClick={() => toggle("claim")}>Add claim</Add>}>
-        {form === "claim" && (
-          <form onSubmit={submit("claim", { field: "Enter a field", value: "Enter a value" })} noValidate className="mb-6 grid items-start gap-3 md:grid-cols-5">
-            <Field name="field" placeholder="Field (e.g. corner, title)" error={errors.field} autoFocus />
-            <Field name="value" placeholder="Value" error={errors.value} />
-            <Field name="source" placeholder="Source" />
-            <Select name="verification" label="Verification level" defaultValue="claimed" options={LEVELS.slice(0, 1).concat(LEVELS.slice(2)).map((t) => ({ value: t, label: cap(t) }))} />
-            <Button>Save claim</Button>
-            {errors.form && <p role="alert" className="text-sm text-red-500 md:col-span-5">{errors.form}</p>}
-          </form>
-        )}
+        {form === "claim" && <div className="mb-6"><ClaimForm plotId={id} onSaved={() => { setForm(null); load(); }} /></div>}
         {groups.length ? (
           <ul className="text-sm">
             {groups.map((g) => (

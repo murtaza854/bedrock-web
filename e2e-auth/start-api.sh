@@ -1,8 +1,8 @@
 #!/bin/sh
 # The API for the sign-in tests: login is ON here (unlike e2e/start-api.sh). Own database (bedrock_e2e_auth), own folders,
-# and three people already created: an owner, an editor and a viewer. Needs the local Postgres from `make db`.
+# and three people already created: an owner, an editor and a viewer. Needs the postgres14 container (port 5432).
 set -e
-ADMIN=${E2E_ADMIN_URL:-postgres://postgres:pw@localhost:5433/postgres}
+ADMIN=${E2E_ADMIN_URL:-postgres://murtaza854@localhost:5432/postgres}
 DB=bedrock_e2e_auth
 TMP=${TMPDIR:-/tmp}
 export PGOPTIONS='--client-min-messages=warning'

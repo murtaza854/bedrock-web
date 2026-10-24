@@ -1,9 +1,9 @@
 #!/bin/sh
 # Starts the API for the Playwright tests on its own database (bedrock_e2e) and its own file folder, so a test run
 # never touches your real plots or uploads. The database is dropped and rebuilt from schema.sql on every run.
-# Needs the local Postgres from `make db` in bedrock-api.
+# Needs the postgres14 container (port 5432).
 set -e
-ADMIN=${E2E_ADMIN_URL:-postgres://postgres:pw@localhost:5433/postgres}
+ADMIN=${E2E_ADMIN_URL:-postgres://murtaza854@localhost:5432/postgres}
 DOCS=${TMPDIR:-/tmp}/bedrock-e2e-docs
 export PGOPTIONS='--client-min-messages=warning'
 psql "$ADMIN" -q -c "drop database if exists bedrock_e2e with (force)" -c "create database bedrock_e2e"

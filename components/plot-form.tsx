@@ -40,7 +40,8 @@ export function PlotForm({ plot }: { plot?: any }) {
     else if (plot?.gps_lat != null) body.clear_location = true; // the pin was removed from a plot that had one
     setBusy(true);
     try {
-      await (plot ? patch(`/plots/${plot.id}`, body) : post("/plots", body));
+      const r = await (plot ? patch(`/plots/${plot.id}`, body) : post("/plots", body));
+      if (!plot) return router.push(`/dashboard/plots/${r.id}/setup`); // new plot: offer quotes, facts, tasks and offers next
     } catch (x) {
       setBusy(false);
       return setErrors({ form: (x as Error).message.includes("duplicate") ? "A plot with this area, sector and number already exists" : "Could not save the plot" });

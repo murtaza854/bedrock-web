@@ -38,6 +38,7 @@ test.describe("Plot form", () => {
     await page.getByRole("combobox", { name: "Corner" }).click();
     await page.getByRole("option", { name: "Yes" }).click();
     await page.getByRole("button", { name: "Add plot" }).click();
+    await page.getByRole("link", { name: "Skip all" }).click();
     await expect(page).toHaveURL(/\/dashboard\/plots$/);
     const p = await saved(page, "167 & 169");
     expect([p.area, p.sector, p.street, p.size_sqyd, p.corner]).toEqual(["Detail Area", "Al Murtaza Commercial", "Al Murtaza Lane 3", 400, true]);
@@ -81,6 +82,7 @@ test.describe("Choosing a location", () => {
     await page.getByRole("button", { name: /Al Murtaza Commercial, DHA Phase 6/ }).click();
     await expect(page.getByText(/Pin at 24\.79420, 67\.06890/)).toBeVisible();
     await page.getByRole("button", { name: "Add plot" }).click();
+    await page.getByRole("link", { name: "Skip all" }).click();
     await expect(page).toHaveURL(/\/dashboard\/plots$/);
     const p = await saved(page, "SEARCH-1");
     expect([p.gps_lat, p.gps_lon]).toEqual([24.7942, 67.0689]);
@@ -120,6 +122,7 @@ test.describe("Choosing a location", () => {
     await page.getByPlaceholder("24.8000, 67.0500").fill("24.8, 67.05");
     await expect(page.getByText(/Pin at 24\.80000, 67\.05000/)).toBeVisible();
     await page.getByRole("button", { name: "Add plot" }).click();
+    await page.getByRole("link", { name: "Skip all" }).click();
     await expect(page).toHaveURL(/\/dashboard\/plots$/);
     const p = await saved(page, "COORD-1");
     expect([p.gps_lat, p.gps_lon]).toEqual([24.8, 67.05]);
