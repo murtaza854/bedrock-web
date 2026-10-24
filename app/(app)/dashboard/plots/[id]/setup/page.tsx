@@ -8,6 +8,7 @@ import { canSeeMoney, useMe } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Errors, Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
+import { StepBar } from "@/components/step-bar";
 import { ClaimForm, QuoteForm } from "@/components/quote-claim-forms";
 
 // The steps after "Add plot". Every step can be skipped; whatever is saved shows under the form so you can add several.
@@ -73,8 +74,8 @@ export default function Setup({ params }: { params: Promise<{ id: string }> }) {
         <p className="text-sm text-muted">Plot added: <b className="font-medium text-ink">{label(plot)}</b></p>
         <Link href="/dashboard/plots" className="text-sm text-muted hover:text-ink">Skip all</Link>
       </div>
-      <p className="mt-6 text-xs uppercase tracking-wider text-muted">Step {step + 1} of {steps.length}</p>
-      <h1 className="mt-1 text-2xl font-semibold tracking-tight">{s.name}</h1>
+      <div className="mt-6"><StepBar step={step + 1} total={steps.length + 1} /></div>
+      <h1 className="mt-3 text-2xl font-semibold tracking-tight">{s.name}</h1>
       <p className="mt-1 text-sm text-muted">{s.hint} You can skip this and add it later from the plot page.</p>
       <div className="mt-6">{s.body}</div>
       {saved[step].length > 0 && <ul className="mt-5 text-sm">{saved[step].map((x, i) => <li key={i} className="border-t border-line py-2">Saved: {x}</li>)}</ul>}

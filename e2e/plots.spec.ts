@@ -96,12 +96,14 @@ test.describe("Plot list", () => {
 test.describe("Add plot: setup steps", () => {
   test("after adding, quotes, facts, a task and an offer can each be added or skipped", async ({ page }) => {
     await page.goto("/dashboard/plots/new");
+    await expect(page.getByRole("progressbar", { name: "Step 1 of 5" })).toBeVisible();
     await page.getByRole("combobox", { name: "Area" }).fill("Wizard Town");
     await page.getByRole("combobox", { name: "Area" }).press("Escape");
     await page.locator('input[name="plot_no"]').fill("W-1");
     await page.locator('input[name="size"]').fill("400");
     await page.getByRole("button", { name: "Add plot" }).click();
     await expect(page.getByRole("heading", { name: "Quotes" })).toBeVisible();
+    await expect(page.getByRole("progressbar", { name: "Step 2 of 5" })).toBeVisible();
     await page.getByPlaceholder("Broker", { exact: true }).fill("Ali");
     await page.getByPlaceholder("Price (PKR)").fill("620000000");
     await page.getByRole("button", { name: "Save quote" }).click();
