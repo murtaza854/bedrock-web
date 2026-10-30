@@ -1,4 +1,4 @@
-import { API, expect, test } from "./fixtures";
+import { API, bought, expect, test } from "./fixtures";
 
 // A saved one-floor model: 3,000 sq ft ground floor at `groundPrice` a sq ft, construction 6,000 a sq ft, land 100,000,000.
 // Revenue 3,000 x groundPrice; cost 18,000,000 + 100,000,000.
@@ -11,7 +11,7 @@ async function model(request: any, plotId: number, name: string, groundPrice: nu
 }
 const result = (page: any) => page.locator("section", { has: page.getByRole("heading", { name: /^Result/ }) });
 const tab = (page: any, name: string | RegExp) => page.getByRole("button", { name });
-const open = (page: any, plotId: number) => page.goto(`/dashboard/plots/${plotId}/financials`);
+const open = async (page: any, plotId: number) => { await bought(page.request, plotId); await page.goto(`/dashboard/plots/${plotId}/financials`); };
 
 test.describe("Scenarios", () => {
   test("duplicate copies the floors and prices; make primary moves the star; delete asks first", async ({ page, plot, request }) => {
@@ -22,7 +22,7 @@ test.describe("Scenarios", () => {
     await page.getByRole("button", { name: "Duplicate" }).click();
     await expect(page.getByLabel("Scenario name")).toHaveValue("Base (copy)");
     await expect(page.getByLabel("Built area")).toHaveCount(1);
-    await expect(page.getByLabel("Price per sq ft", { exact: true })).toHaveValue("120000");
+    await expect(page.getByLabel("Price per sq ft", { exact: true })).toHaveValue("120,000");
     await expect(tab(page, /^Base ★/)).toBeVisible(); // the copy is not primary
 
     await page.getByRole("button", { name: "Make primary" }).click();
@@ -50,10 +50,10 @@ test.describe("Scenarios", () => {
     await page.getByRole("option", { name: "Try" }).click();
     const table = page.locator("table", { hasText: "Margin on cost" });
     await expect(table).toContainText("Demand (saved)");
-    await expect(table.locator("tr", { hasText: "Profit" })).toContainText("24.20 crore");
-    await expect(table.locator("tr", { hasText: "Profit" })).toContainText("18.20 crore");
-    await expect(table.locator("tr", { hasText: "Revenue" })).toContainText("36.00 crore");
-    await expect(table.locator("tr", { hasText: "Revenue" })).toContainText("30.00 crore");
+    await expect(table.locator("tr", { hasText: "Profit" })).toContainText("242,000,000");
+    await expect(table.locator("tr", { hasText: "Profit" })).toContainText("182,000,000");
+    await expect(table.locator("tr", { hasText: "Revenue" })).toContainText("360,000,000");
+    await expect(table.locator("tr", { hasText: "Revenue" })).toContainText("300,000,000");
   });
 
   test("a plot with no size cannot be modelled yet", async ({ page, plot }) => {
@@ -75,25 +75,25 @@ test.describe("Inputs", () => {
     await page.getByRole("option", { name: "Fixed per unit" }).click();
     await page.getByLabel("Price per unit").fill("130000000");
     await page.getByLabel("Units", { exact: true }).fill("5");
-    await expect(result(page)).toContainText("65.00 crore"); // revenue 650,000,000
+    await expect(result(page)).toContainText("650,000,000"); // revenue 650,000,000
     await expect(page.getByLabel("Price per sq ft", { exact: true })).toHaveCount(0); // the per-sq-ft box is gone
   });
 
   test("a percentage cost on land lowers the residual land price and the profit", async ({ page, plot, request }) => {
     const p = await plot({});
-    // golden-style numbers: revenue 81 crore, construction 10.8 crore, land 63 crore
+    // golden-style numbers: revenue 810,000,000, construction 108,000,000, land 630,000,000
     const m = await (await request.post(`${API}/plots/${p.id}/financial-models`, { data: { name: "Pct", scenario_label: "pct" } })).json();
     const upper = Array.from({ length: 5 }, (_, i) => ({ label: `Floor ${i + 1}`, floor_type: "upper", use: "office", built_area_sqft: 3000, sellable_ratio: 1, price_mode: "per_sqft", price_per_sqft: 30_000, unit_count: 0, fixed_unit_price: 0 }));
     const ground = { label: "Ground", floor_type: "ground", use: "shop", built_area_sqft: 3000, sellable_ratio: 1, price_mode: "per_sqft", price_per_sqft: 120_000, unit_count: 0, fixed_unit_price: 0 };
     await request.put(`${API}/financial-models/${m.id}`, { data: { ...m, floors: [ground, ...upper], construction_per_sqft: 6000, land_price: 630_000_000, land_price_basis: "manual", target_margin: 0.2 } });
     await open(page, p.id);
-    await expect(result(page)).toContainText("56.70 crore"); // residual land with no other costs
-    await expect(result(page)).toContainText("7.20 crore"); // profit
+    await expect(result(page)).toContainText("567,000,000"); // residual land with no other costs
+    await expect(result(page)).toContainText("72,000,000"); // profit
 
     await page.getByLabel("Rate in percent").first().fill("4"); // the "Land transfer and stamp duty" template, 4% of land
-    await expect(result(page)).toContainText("54.52 crore"); // 567 / 1.04
-    await expect(result(page)).toContainText("4.68 crore"); // 7.20 less 4% of 63 crore (2.52)
-    await expect(result(page)).toContainText("other 2.52 crore");
+    await expect(result(page)).toContainText("545,192,308"); // 567 / 1.04
+    await expect(result(page)).toContainText("46,800,000"); // 72,000,000 less 4% of 630,000,000 (25,200,000)
+    await expect(result(page)).toContainText("other 25,200,000");
   });
 
   test("land price shortcuts take the lowest, median or latest quote", async ({ page, plot, request }) => {
@@ -164,9 +164,9 @@ test.describe("Warnings and guards", () => {
     const p = await plot({});
     await model(request, p.id, "Share", 120_000); // revenue 360 million at a share of 1
     await open(page, p.id);
-    await expect(result(page)).toContainText("36.00 crore");
+    await expect(result(page)).toContainText("360,000,000");
     await page.getByLabel("Sellable share", { exact: true }).fill("0.8");
-    await expect(result(page)).toContainText("28.80 crore"); // 360m x 0.8
+    await expect(result(page)).toContainText("288,000,000"); // 360m x 0.8
     await page.getByLabel("Sellable share", { exact: true }).fill("1.5");
     await expect(page.getByText("must be between 0 and 1").first()).toBeVisible(); // listed at the top and under the field
   });

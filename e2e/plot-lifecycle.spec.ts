@@ -169,7 +169,7 @@ test.describe("Purchase form: the suggestion never overwrites what you typed", (
     await price.fill("650000000");
     await page.locator('dialog input[name="seller"]').fill("Typed Seller");
     await expect(page.getByText(/Starting from the plot's current price/)).toBeVisible(); // the suggestion has now arrived
-    await expect(price).toHaveValue("650000000");
+    await expect(price).toHaveValue("650,000,000");
     await expect(page.locator('dialog input[name="seller"]')).toHaveValue("Typed Seller");
     await page.getByRole("button", { name: "Record purchase" }).click();
     await expect(page.locator("section", { has: page.getByRole("heading", { name: "Purchase" }) })).toContainText("PKR 650,000,000");
@@ -185,7 +185,7 @@ test.describe("Purchase form: the suggestion never overwrites what you typed", (
     await page.getByRole("option", { name: "Bought" }).click();
     await page.locator('dialog input[name="price_pkr"]').fill("655000000"); // typed price, untouched seller
     await expect(page.getByText(/price you agreed in your accepted offer/)).toBeVisible();
-    await expect(page.locator('dialog input[name="price_pkr"]')).toHaveValue("655000000"); // mine
+    await expect(page.locator('dialog input[name="price_pkr"]')).toHaveValue("655,000,000"); // mine
     await expect(page.locator('dialog input[name="seller"]')).toHaveValue("Agreed Seller"); // suggested
   });
 
@@ -196,7 +196,7 @@ test.describe("Purchase form: the suggestion never overwrites what you typed", (
     await page.getByRole("combobox", { name: "Status" }).click();
     await page.getByRole("option", { name: "Bought" }).click();
     const price = page.locator('dialog input[name="price_pkr"]');
-    await expect(price).toHaveValue("700000000"); // suggested from the plot's price
+    await expect(price).toHaveValue("700,000,000"); // suggested from the plot's price
     await price.fill("");
     await page.getByRole("button", { name: "Record purchase" }).click();
     await expect(page.getByText("Enter the price you paid")).toBeVisible();
@@ -212,7 +212,7 @@ test.describe("Purchase form: the suggestion never overwrites what you typed", (
     const status = (no: string) => page.locator("tbody tr", { hasText: no }).getByRole("combobox", { name: /^Status of/ });
     await status("PF-PRICED").click();
     await page.getByRole("option", { name: "Bought" }).click();
-    await expect(page.locator('dialog input[name="price_pkr"]')).toHaveValue("700000000");
+    await expect(page.locator('dialog input[name="price_pkr"]')).toHaveValue("700,000,000");
     await page.getByRole("button", { name: "Cancel" }).click();
     await status("PF-BARE").click();
     await page.getByRole("option", { name: "Bought" }).click();

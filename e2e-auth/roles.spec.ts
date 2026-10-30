@@ -64,11 +64,11 @@ test.describe("What each role sees on screen", () => {
     const viewer = await as(PEOPLE.viewer);
     await viewer.page.goto(`/dashboard/plots/${plot.id}`);
     await expect(heading(viewer, /^Quotes/)).toBeVisible();
-    for (const name of [/^Financials/, /^Offers/, /^Purchase/]) await expect(heading(viewer, name)).toHaveCount(0);
+    for (const name of [/^Feasibility/, /^Offers/, /^Purchase/]) await expect(heading(viewer, name)).toHaveCount(0);
 
     const editor = await as(PEOPLE.editor);
     await editor.page.goto(`/dashboard/plots/${plot.id}`);
-    await expect(heading(editor, /^Financials/)).toBeVisible();
+    await expect(heading(editor, /^Feasibility/)).toBeVisible();
     await expect(heading(editor, /^Offers/)).toBeVisible();
   });
 
@@ -102,7 +102,7 @@ test.describe("What each role sees on screen", () => {
     for (const path of [`/dashboard/plots/${plot.id}/financials`, "/dashboard/offers", "/dashboard/settings/rates"]) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
-      await expect(page.getByRole("main"), path).not.toContainText(/crore|Open negotiations|Stamp duty|Our latest offer|Break-even/);
+      await expect(page.getByRole("main"), path).not.toContainText(/Open negotiations|Stamp duty|Our latest offer|Break-even/);
     }
   });
 
@@ -121,6 +121,7 @@ test.describe("What each role sees on screen", () => {
 
   test("an editor still gets the real pages", async ({ as, owner }) => {
     const plot = await (await owner.post(`${API}/plots`, { data: plotBody("E-REAL") })).json();
+    await owner.post(`${API}/plots/${plot.id}/purchase`, { data: { price_pkr: 1_000_000, bought_on: "2024-01-01", seller: "S", note: "" } }); // the detailed model opens for a bought plot
     const { page } = await as(PEOPLE.editor);
     await page.goto("/dashboard/offers");
     await expect(page.getByRole("heading", { name: "Offers" })).toBeVisible();

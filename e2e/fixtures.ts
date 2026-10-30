@@ -24,3 +24,8 @@ export const test = base.extend<{ plot: (p: Record<string, unknown>) => Promise<
   },
 });
 export { expect };
+
+// the detailed financial model is only open for a bought plot; safe to call twice
+export async function bought(request: any, plotId: number) {
+  await request.post(`${API}/plots/${plotId}/purchase`, { data: { price_pkr: 1_000_000, bought_on: "2024-01-01", seller: "Test seller", note: "" } });
+}

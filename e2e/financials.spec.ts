@@ -1,10 +1,11 @@
-import { API, expect, test } from "./fixtures";
+import { API, bought, expect, test } from "./fixtures";
 
 // The golden case: 400 sq yd (3,600 sq ft), ground plus five floors of 3,000 sq ft each. Ground sells at 120,000 a
 // sq ft, upper floors at 30,000. Construction 6,000 a sq ft. Land 630,000,000 from the plot's quote.
 test("golden case through the screen", async ({ page, plot, request }) => {
   const p = await plot({});
   await request.post(`${API}/plots/${p.id}/quotes`, { data: { broker: "Test broker", quote_type: "negotiable", price_pkr: 630_000_000, inclusions: "" } });
+  await bought(request, p.id);
   await page.goto(`/dashboard/plots/${p.id}/financials`);
   await expect(page.getByText("400 sq yd = 3,600 sq ft")).toBeVisible();
 
@@ -22,15 +23,15 @@ test("golden case through the screen", async ({ page, plot, request }) => {
   await page.getByRole("button", { name: "+ Generate upper floors" }).click();
   await expect(page.getByLabel("Built area")).toHaveCount(6);
 
-  await page.locator("section", { hasText: "Construction cost" }).locator('input[type="number"]').first().fill("6000");
+  await page.locator("section", { hasText: "Construction cost" }).locator('input[inputmode="decimal"]').first().fill("6000");
 
   const result = page.locator("section", { has: page.getByRole("heading", { name: /^Result/ }) });
-  await expect(result).toContainText("81.00 crore"); // revenue 810,000,000
-  await expect(result).toContainText("73.80 crore"); // total cost 738,000,000
-  await expect(result).toContainText("7.20 crore"); // profit 72,000,000
+  await expect(result).toContainText("810,000,000"); // revenue 810,000,000
+  await expect(result).toContainText("738,000,000"); // total cost 738,000,000
+  await expect(result).toContainText("72,000,000"); // profit 72,000,000
   await expect(result).toContainText("9.76% on cost");
-  await expect(result).toContainText("70.20 crore"); // break-even land 702,000,000
-  await expect(result).toContainText("56.70 crore"); // residual land at 20% 567,000,000
+  await expect(result).toContainText("702,000,000"); // break-even land 702,000,000
+  await expect(result).toContainText("567,000,000"); // residual land at 20% 567,000,000
 
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByRole("button", { name: "Saved" })).toBeVisible();
@@ -40,7 +41,7 @@ test("golden case through the screen", async ({ page, plot, request }) => {
   expect(models[0].output.residual_land).toBe(567_000_000);
 
   // the sensitivity table is there and shows a loss where the brief says: sale prices down 10%
-  await expect(page.locator("td", { hasText: "-90.00 lakh" }).first()).toBeVisible();
+  await expect(page.locator("td", { hasText: "-9,000,000" }).first()).toBeVisible();
 
   await page.getByPlaceholder("Why are you saving this?").fill("Golden case check");
   await page.getByRole("button", { name: "Save snapshot" }).click();
@@ -49,8 +50,9 @@ test("golden case through the screen", async ({ page, plot, request }) => {
   expect(snaps).toHaveLength(1);
 });
 
-test("a floor with no built area shows an inline error and no results", async ({ page, plot }) => {
+test("a floor with no built area shows an inline error and no results", async ({ page, plot, request }) => {
   const p = await plot({});
+  await bought(request, p.id);
   await page.goto(`/dashboard/plots/${p.id}/financials`);
   await page.getByPlaceholder("New scenario").fill("Broken");
   await page.getByRole("button", { name: "Add", exact: true }).click();

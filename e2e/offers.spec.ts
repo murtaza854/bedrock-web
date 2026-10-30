@@ -89,7 +89,7 @@ test.describe("A negotiation", () => {
     await request.post(`${API}/negotiations/${n.id}/close`, { data: { status: "accepted", agreed_pkr: 640_000_000, note: "" } });
     await page.goto(`/dashboard/plots/${p.id}?buy=1`);
     await expect(page.getByRole("heading", { name: "Record the purchase" })).toBeVisible();
-    await expect(page.locator('dialog input[name="price_pkr"]')).toHaveValue("640000000");
+    await expect(page.locator('dialog input[name="price_pkr"]')).toHaveValue("640,000,000");
     await expect(page.locator('dialog input[name="seller"]')).toHaveValue("Agreed Seller");
   });
 });

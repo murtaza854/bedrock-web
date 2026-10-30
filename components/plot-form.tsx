@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { get, patch, post } from "@/lib/api";
+import { get, patch, post, put } from "@/lib/api";
+import { useSettings } from "@/lib/settings";
 import { SEED_AREAS } from "@/lib/areas";
 import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,12 @@ const Label = ({ children }: { children: React.ReactNode }) => <p className="mb-
 export function PlotForm({ plot }: { plot?: any }) {
   const router = useRouter();
   const me = useMe();
+  // what the plot is for: the scoring profile (Residential or Commercial). Also picks which bylaws apply.
+  const [profiles, setProfiles] = useState<any[]>([]);
+  const { default_profile } = useSettings();
+  const [use, setUse] = useState<string>(plot?.profile_id != null ? String(plot.profile_id) : "");
+  useEffect(() => { get("/score/profiles").then(setProfiles).catch(() => {}); }, []);
+  const useId = use || String(default_profile ?? profiles[0]?.id ?? "");
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
   const [coords, setCoords] = useState(plot?.gps_lat != null ? `${plot.gps_lat}, ${plot.gps_lon}` : "");
@@ -44,6 +51,7 @@ export function PlotForm({ plot }: { plot?: any }) {
     setBusy(true);
     try {
       const r = await (plot ? patch(`/plots/${plot.id}`, body) : post("/plots", body));
+      if (useId && useId !== String(plot?.profile_id ?? "")) await put(`/plots/${plot?.id ?? r.id}/profile`, { profile_id: Number(useId) });
       if (!plot) return router.push(`/dashboard/plots/${r.id}/setup`); // new plot: offer quotes, facts, tasks and offers next
     } catch (x) {
       setBusy(false);
@@ -73,6 +81,10 @@ export function PlotForm({ plot }: { plot?: any }) {
           <button type="button" onClick={() => setByHand(!byHand)} className="mt-2 text-xs text-muted underline hover:text-ink">{byHand ? "Hide the coordinates" : "Type the coordinates instead"}</button>
           {byHand && <div className="mt-2"><Field name="coords" value={coords} onChange={(e) => setCoords(e.target.value)} placeholder="24.8000, 67.0500" /></div>}
           {errors.coords && <p role="alert" className="mt-1.5 text-xs text-red-500">{errors.coords}</p>}
+        </div>
+        <div>
+          <Label>Use</Label>
+          <Select label="Use" value={useId} onChange={setUse} options={profiles.map((x) => ({ value: String(x.id), label: x.name }))} />
         </div>
         <div>
           <Label>Corner</Label>

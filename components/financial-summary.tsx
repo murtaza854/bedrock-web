@@ -1,24 +1,86 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { get } from "@/lib/api";
-import { Entry, crore, pct } from "@/lib/feasibility";
+import { get, post } from "@/lib/api";
+import { Entry, Model, Output, amt, pct } from "@/lib/feasibility";
 
-export function FinancialSummary({ plotId }: { plotId: string }) {
+const Line = ({ k, area = "", rate = "", v, strong }: { k: string; area?: string; rate?: string; v: string; strong?: boolean }) => (
+  <tr className={`border-t border-line ${strong ? "font-medium" : "text-muted"}`}><td className="py-1.5 text-left">{k}</td><td className="py-1.5 text-right">{area}</td><td className="py-1.5 text-right">{rate}</td><td className={`py-1.5 text-right ${strong ? "" : "text-ink"}`}>{v}</td></tr>
+);
+
+// Several buildings are saved as one scenario with floors labelled "Building 2 – Ground".
+const building = (label: string) => /^Building (\d+) – (.*)$/.exec(label);
+
+function Table({ m, o }: { m: Model; o: Output }) {
+  return (
+    <table className="w-full text-xs">
+      <thead><tr className="text-muted"><th className="py-1.5 text-left font-normal">Item</th><th className="py-1.5 text-right font-normal">Area (sq ft)</th><th className="py-1.5 text-right font-normal">Rate per sq ft</th><th className="py-1.5 text-right font-normal">Amount (PKR)</th></tr></thead>
+      <tbody>
+        {o.floors.map((f) => { const rate = m.floors.find((x) => x.label === f.label)?.price_per_sqft; return <Line key={f.label} k={f.label} area={amt(f.built_sqft)} rate={rate ? amt(rate) : "-"} v={f.revenue ? amt(f.revenue) : "-"} />; })}
+        <Line k="Revenue" v={amt(o.revenue)} strong />
+        <Line k="Construction" area={amt(o.built_area_sqft)} rate={amt(m.construction_per_sqft)} v={amt(o.construction)} />
+        <Line k="Land" v={amt(o.land)} />
+        <Line k="Total cost" v={amt(o.total_cost)} strong />
+        <Line k="Profit" v={amt(o.profit)} strong />
+        {m.construction_months > 0 && <>
+          <Line k="Construction time" area={`${m.construction_months} months`} v="" />
+          <Line k="Monthly profit" v={amt(Math.round(o.profit / m.construction_months))} />
+          <Line k="Annual profit" v={amt(Math.round((o.profit / m.construction_months) * 12))} />
+        </>}
+      </tbody>
+    </table>
+  );
+}
+
+// One scenario. With several buildings there are three views: each building on its own, and the two combined.
+// A building on its own gets its share of the land (the land split equally), worked out by the same calculation.
+function Scenario({ m, o, plotId }: { m: Model; o: Output; plotId: string }) {
+  const nums = [...new Set(m.floors.map((f) => building(f.label)?.[1]).filter(Boolean))] as string[];
+  const [view, setView] = useState("all");
+  const [part, setPart] = useState<{ view: string; m: Model; o: Output } | null>(null);
+  useEffect(() => {
+    if (view === "all") return;
+    const dm = { ...m, plot_area_sqyd: m.plot_area_sqyd / nums.length, land_price: Math.round(m.land_price / nums.length), land_price_basis: "manual",
+      floors: m.floors.filter((f) => building(f.label)?.[1] === view).map((f) => ({ ...f, label: building(f.label)![2] })) };
+    post("/financial/compute", dm).then((r) => setPart({ view, m: dm, o: r.output })).catch(() => {});
+  }, [view]);
+  const shown = view === "all" ? { m, o } : part?.view === view ? part : null;
+  return (
+    <div className="mt-3">
+      {nums.length > 1 && (
+        <div className="mb-3 flex gap-2 text-xs">
+          {[...nums.map((k) => [k, `Building ${k}`]), ["all", "Combined"]].map(([k, text]) => (
+            <button key={k} type="button" aria-pressed={view === k} onClick={() => setView(k)}
+              className={`rounded-lg px-3 py-1.5 ${view === k ? "bg-ink text-bg" : "bg-line/50 hover:bg-line"}`}>{text}</button>))}
+        </div>)}
+      {shown && <Table m={shown.m} o={shown.o} />}
+      <Link href={`/dashboard/plots/${plotId}/feasibility?scenario=${m.id}`} className="mt-3 inline-block text-xs text-muted underline hover:text-ink">Edit this scenario</Link>
+    </div>
+  );
+}
+
+export function FinancialSummary({ plotId, bought }: { plotId: string; bought: boolean }) {
   const [list, setList] = useState<Entry[] | null>(null);
   useEffect(() => { get(`/plots/${plotId}/financial-models`).then(setList).catch(() => setList([])); }, [plotId]);
   if (!list) return null;
   return (
     <section className="border-t border-line pt-5">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-xs font-medium uppercase tracking-wider text-muted">Financials<span className="ml-3 normal-case tracking-normal">{list.length} {list.length === 1 ? "scenario" : "scenarios"}</span></h2>
-        <Link href={`/dashboard/plots/${plotId}/financials`} className="text-sm text-muted hover:text-ink">Open</Link>
+        <h2 className="text-xs font-medium uppercase tracking-wider text-muted">Feasibility<span className="ml-3 normal-case tracking-normal">{list.length} {list.length === 1 ? "scenario" : "scenarios"}</span></h2>
+        <span className="flex gap-5 text-sm"><Link href={`/dashboard/plots/${plotId}/feasibility`} className="text-muted hover:text-ink">Quick feasibility</Link>{bought && <Link href={`/dashboard/plots/${plotId}/financials`} className="text-muted hover:text-ink">Detailed</Link>}</span>
       </div>
       {list.length ? (
         <ul className="mt-4 text-sm">{list.map(({ model: m, output: o, errors }) => (
-          <li key={m.id} className="flex items-center justify-between gap-4 border-t border-line py-2.5 first:border-t-0 first:pt-0">
-            <span className="font-medium">{m.name}{m.is_primary && <span className="ml-2 text-xs text-muted">primary</span>}</span>
-            <span className="text-muted">{errors?.length || !o ? "Incomplete" : `Profit ${crore(o.profit)} · ${pct(o.margin_on_cost)} on cost`}</span>
+          <li key={m.id} className="border-t border-line py-2.5 first:border-t-0 first:pt-0">
+            <details>
+              <summary className="flex cursor-pointer items-center justify-between gap-4">
+                <span className="font-medium">{m.name}{m.is_primary && <span className="ml-2 text-xs font-normal text-muted">primary</span>}</span>
+                <span className="text-muted">{errors?.length || !o ? "Incomplete" : `Profit ${amt(o.profit)} · ${pct(o.margin_on_cost)} on cost`}</span>
+              </summary>
+              {errors?.length || !o ? (
+                <ul className="mt-3 grid gap-1 text-xs text-muted">{(errors ?? []).map((e) => <li key={e.field + e.message}>{e.message}</li>)}</ul>
+              ) : <Scenario m={m} o={o} plotId={plotId} />}
+            </details>
           </li>))}</ul>
       ) : <p className="mt-4 text-sm text-muted">No model yet. Work out what this plot can pay for the land.</p>}
     </section>

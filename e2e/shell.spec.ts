@@ -26,6 +26,7 @@ test.describe("Sidebar", () => {
 
   test("every sidebar link opens a page that loads", async ({ page }) => {
     await page.goto("/dashboard");
+    await expect(page.getByRole("navigation").getByRole("link", { name: "Offers" })).toBeVisible(); // money links appear once the role is known
     const links = await page.getByRole("navigation").getByRole("link").evaluateAll((els) => els.map((e) => (e as HTMLAnchorElement).getAttribute("href")!));
     expect(links.length).toBeGreaterThanOrEqual(10);
     for (const href of links) {

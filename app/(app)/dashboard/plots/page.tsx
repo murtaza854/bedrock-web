@@ -14,7 +14,11 @@ type SortKey = "label" | "size" | "price" | "ppsy" | "n" | "spread";
 const val = (p: any, k: SortKey) => (k === "label" ? label(p) : k === "size" ? p.size_sqyd : k === "ppsy" ? ppsy(p) : p[k]);
 
 export default function Plots() {
-  const { spread_alert_pct: spreadAlert } = useSettings();
+  const { spread_alert_pct: spreadAlert, default_profile } = useSettings();
+  // a plot with no use of its own follows the default profile, the same fallback the scorecard uses
+  const [profiles, setProfiles] = useState<any[]>([]);
+  useEffect(() => { get("/score/profiles").then(setProfiles).catch(() => {}); }, []);
+  const useOf = (p: any) => profiles.find((x) => x.id === (p.profile_id ?? default_profile ?? profiles[0]?.id))?.name ?? "";
   const [plots, setPlots] = useState<any[] | null>(null);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
@@ -89,7 +93,7 @@ export default function Plots() {
       <table className="mt-6 w-full text-sm">
         <thead>
           <tr className="border-b border-line">
-            {th("label", "Plot", false)}{th("size", "Size")}{th("price", "Price")}{th("ppsy", "Per sq yd")}{th("n", "Quotes")}{th("spread", "Spread")}
+            {th("label", "Plot", false)}<th className="pb-3 pl-6 text-left text-xs font-normal text-muted">Use</th>{th("size", "Size")}{th("price", "Price")}{th("ppsy", "Per sq yd")}{th("n", "Quotes")}{th("spread", "Broker gap")}
             <th className="pb-3 pl-4 text-left text-xs font-normal text-muted">Status</th><th />
           </tr>
         </thead>
@@ -100,6 +104,7 @@ export default function Plots() {
                 <Link href={`/dashboard/plots/${p.id}`} className="font-medium after:absolute after:inset-0">{label(p)}</Link>
                 {p.street && <p className="text-xs text-muted">{p.street}</p>}
               </td>
+              <td className="pl-6 text-muted">{useOf(p)}</td>
               <td className="pl-6 text-right">{p.size_sqyd ? `${p.size_sqyd} sq yd` : <span className="text-muted">-</span>}</td>
               <td className="pl-6 text-right">
                 {p.price ? <>{pkr(p.price)}<p className="text-xs text-muted">{p.quote_type === "transacted" ? "bought for" : p.quote_type.replace("_", " ")}</p></> : <span className="text-muted">no quotes</span>}
@@ -115,7 +120,7 @@ export default function Plots() {
             </tr>
           ))}
           {!shown.length && (
-            <tr><td colSpan={8} className="py-16 text-center text-muted">
+            <tr><td colSpan={9} className="py-16 text-center text-muted">
               {plots.length ? "No plots match these filters." : "No plots yet. Add your first one."}
             </td></tr>
           )}

@@ -55,7 +55,7 @@ function Preferences({ owner }: { owner: boolean }) {
           <div><Lbl>Project name</Lbl><Field value={vals.project_name ?? ""} onChange={(e) => set("project_name", e.target.value)} placeholder="Shown under Bedrock" disabled={!owner} error={errors.project_name} /></div>
           <div><Lbl>Default scoring profile</Lbl><Select label="Default scoring profile" value={vals.default_profile ?? ""} onChange={(v) => set("default_profile", v)} options={profileOpts} disabled={!owner} /></div>
         </div>
-        <p className="mt-3 max-w-xl text-xs text-muted">{defs.find((x) => x.key === "default_profile")?.hint} This is where you say whether the project is mostly residential, commercial or mixed.</p>
+        <p className="mt-3 max-w-xl text-xs text-muted">{defs.find((x) => x.key === "default_profile")?.hint} This is where you say whether the project is mostly residential or commercial.</p>
       </Section>
 
       <Section title="Your rules" note="the numbers behind the alerts and the warnings">

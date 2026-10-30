@@ -1,4 +1,4 @@
-export const USES = [{ value: "residential", label: "Residential" }, { value: "commercial", label: "Commercial" }, { value: "mixed", label: "Mixed" }];
+export const USES = [{ value: "residential", label: "Residential" }, { value: "commercial", label: "Commercial" }];
 export const dayOf = (d?: string | null) => (d ? new Date(d.slice(0, 10) + "T00:00").toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "-");
 export const today = () => new Date().toLocaleDateString("en-CA");
 export const n = (v: number | null | undefined, unit = "") => (v == null ? "-" : `${v}${unit}`);

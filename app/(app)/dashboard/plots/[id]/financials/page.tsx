@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
   BASES, COVERS, CostRow, Entry, FLOOR_TYPES, FieldError, LAND_BASES, LEVELS, Model, Output, PCT_BASES, SQFT_PER_SQYD, USES,
-  apiErrors, blankFloor, crore, exact, pct,
+  apiErrors, blankFloor, amt, exact, pct,
 } from "@/lib/feasibility";
 
 const opts = (xs: string[]) => xs.map((v) => ({ value: v, label: cap(v) }));
@@ -26,7 +26,7 @@ function Section({ title, note, action, children }: { title: string; note?: stri
     </section>
   );
 }
-const Money = ({ n }: { n: number }) => <span title={exact(n)}>{crore(n)}</span>;
+const Money = ({ n }: { n: number }) => <span>{amt(n)}</span>;
 const Stat = ({ k, v, sub, tone }: { k: string; v: React.ReactNode; sub?: React.ReactNode; tone?: string }) => (
   <div><p className="text-xs text-muted">{k}</p><p className={`mt-1.5 text-2xl font-light tracking-tight ${tone ?? ""}`}>{v}</p>{sub && <p className="mt-1 text-xs text-muted">{sub}</p>}</div>
 );
@@ -34,7 +34,7 @@ const Lvl = ({ value, onChange, name }: { value: string; onChange: (v: string) =
   <Select label={`${name} verification`} variant="ghost" value={value} onChange={onChange} options={LEVELS.map((l) => ({ value: l, label: cap(l) }))} />
 );
 const Num = ({ v, set, className = "", ...p }: { v: number; set: (n: number) => void } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value">) => (
-  <Input type="number" min={0} step="any" className={className} value={Number.isFinite(v) ? v : ""} onChange={(e) => set(e.target.valueAsNumber)} {...p} />
+  <Input type="number" min={0} step="any" className={className} value={Number.isFinite(v) ? v : ""} onChange={(e) => set(e.target.value === "" ? NaN : Number(e.target.value))} {...p} />
 );
 
 export default function Financials({ params }: { params: Promise<{ id: string }> }) {
@@ -177,7 +177,7 @@ export default function Financials({ params }: { params: Promise<{ id: string }>
               {draft.land_price_basis === "specific" && (
                 <div><p className="mb-1.5 text-xs text-muted">Quote</p>
                   <Select label="Quote" value={String(draft.land_quote_id ?? "")} onChange={(v) => mark((m) => { m.land_quote_id = Number(v); })}
-                    options={(ctx?.quotes ?? []).map((q: any) => ({ value: String(q.id), label: `${q.broker}: ${crore(q.price_pkr)} (${cap(q.quote_type)})` }))} /></div>)}
+                    options={(ctx?.quotes ?? []).map((q: any) => ({ value: String(q.id), label: `${q.broker}: ${amt(q.price_pkr)} (${cap(q.quote_type)})` }))} /></div>)}
               {draft.land_price_basis === "manual" && (
                 <div><p className="mb-1.5 text-xs text-muted">Total land price (PKR)</p><Num v={draft.land_price} set={(n) => mark((m) => { m.land_price = n; })} /><E f="land_price" /></div>)}
               <div><p className="mb-1.5 text-xs text-muted">Source</p><Input value={draft.land_source} placeholder="Who said so" onChange={(e) => mark((m) => { m.land_source = e.target.value; })} /></div>
@@ -283,7 +283,7 @@ export default function Financials({ params }: { params: Promise<{ id: string }>
                       <tr key={p}><td className="py-0.5 text-muted">{p > 0 ? "+" : ""}{p}%</td>
                         {[0, 10, 20].map((c) => {
                           const x = o.sensitivity.find((s) => s.price_pct === p && s.construction_pct === c && s.land_pct === land);
-                          return <td key={c} title={x ? exact(x.profit) : ""} className={`px-2 py-1 text-right ${x && x.profit < 0 ? "bg-red-500/15 text-red-600 dark:text-red-300" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"}`}>{x ? crore(x.profit) : "-"}</td>;
+                          return <td key={c} title={x ? exact(x.profit) : ""} className={`px-2 py-1 text-right ${x && x.profit < 0 ? "bg-red-500/15 text-red-600 dark:text-red-300" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"}`}>{x ? amt(x.profit) : "-"}</td>;
                         })}</tr>))}</tbody></table>
                 </div>))}</div>
             </Section>

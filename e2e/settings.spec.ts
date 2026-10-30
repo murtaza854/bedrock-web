@@ -1,4 +1,4 @@
-import { API, expect, test } from "./fixtures";
+import { API, bought, expect, test } from "./fixtures";
 
 const today = () => new Date().toLocaleDateString("en-CA");
 const resetSettings = (request: any) => request.put(`${API}/admin/settings`, { data: { project_name: "", spread_alert_pct: "", stale_quote_days: "" } });
@@ -108,6 +108,7 @@ test.describe("Tax and fee rates", () => {
   test("a confirmed rate can be added to a financial model from the rate table", async ({ page, plot, request }) => {
     await request.post(`${API}/rates`, { data: { key: "stamp_duty", value: 2, effective_from: "2024-01-01", note: "from the rate table test" } });
     const p = await plot({ plot_no: "RATE-FIN" });
+    await bought(request, p.id);
     await page.goto(`/dashboard/plots/${p.id}/financials`);
     await page.getByPlaceholder("New scenario").fill("With rates");
     await page.getByRole("button", { name: "Add", exact: true }).click();

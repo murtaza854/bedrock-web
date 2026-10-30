@@ -15,7 +15,7 @@ export type Floor = {
 };
 export type CostRow = { label: string; basis: string; amount: number; rate: number; verification: Level; note: string };
 export type Model = {
-  id: number; plot_id: number; name: string; scenario_label: string; is_primary: boolean;
+  id: number; plot_id: number; name: string; scenario_label: string; is_primary: boolean; construction_months: number;
   plot_area_sqyd: number; floors: Floor[]; land_price: number; land_price_basis: string; land_quote_id: number | null; land_source: string; land_verification: Level;
   construction_per_sqft: number; construction_covers: string; construction_note: string; construction_verification: Level;
   costs: CostRow[]; target_margin: number;
@@ -34,14 +34,8 @@ export type Output = {
 export type Entry = { model: Model; output: Output | null; errors: FieldError[] | null };
 
 export const SQFT_PER_SQYD = 9;
-const LAKH = 100_000, CRORE = 10_000_000;
-// 63.00 crore / 45.50 lakh / plain below a lakh. Same rules as feasibility.FormatCrore in Go.
-export function crore(n: number): string {
-  const a = Math.abs(n), s = n < 0 ? "-" : "";
-  if (a >= CRORE) return `${s}${(a / CRORE).toFixed(2)} crore`;
-  if (a >= LAKH) return `${s}${(a / LAKH).toFixed(2)} lakh`;
-  return n.toLocaleString();
-}
+// Whole rupees with thousands commas: 630,000,000.
+export const amt = (n: number) => n.toLocaleString("en-US");
 export const exact = (n: number) => "PKR " + n.toLocaleString();
 export const pct = (x: number | null | undefined, d = 2) => (x == null ? "-" : `${(x * 100).toFixed(d)}%`);
 

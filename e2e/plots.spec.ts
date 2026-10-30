@@ -101,6 +101,8 @@ test.describe("Add plot: setup steps", () => {
     await page.getByRole("combobox", { name: "Area" }).press("Escape");
     await page.locator('input[name="plot_no"]').fill("W-1");
     await page.locator('input[name="size"]').fill("400");
+    await page.getByRole("combobox", { name: "Use" }).click();
+    await page.getByRole("option", { name: "Commercial" }).click();
     await page.getByRole("button", { name: "Add plot" }).click();
     await expect(page.getByRole("heading", { name: "Quotes" })).toBeVisible();
     await expect(page.getByRole("progressbar", { name: "Step 2 of 5" })).toBeVisible();
@@ -123,5 +125,8 @@ test.describe("Add plot: setup steps", () => {
     await expect(page.getByRole("heading", { name: /Wizard Town/ })).toBeVisible();
     await expect(page.getByText("Ali", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Visit the plot")).toBeVisible();
+    await expect(page.getByText("Commercial profile")).toBeVisible(); // the scorecard section follows the chosen use
+    await page.goto("/dashboard/plots");
+    await expect(page.getByRole("row", { name: /Wizard Town/ })).toContainText("Commercial");
   });
 });

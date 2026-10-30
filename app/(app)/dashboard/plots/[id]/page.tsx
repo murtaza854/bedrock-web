@@ -110,7 +110,7 @@ export default function Plot({ params }: { params: Promise<{ id: string }> }) {
         <Fact k={p.quote_type === "transacted" ? "Bought for" : "Price"} v={p.price ? pkr(p.price).replace("PKR ", "") : "-"} />
         <Fact k="Per sq yd" v={mine ? fmt(mine) : "-"} />
         <Fact k="Quotes" v={p.n ?? 0} />
-        <Fact k="Brokers' spread" v={p.spread != null ? `${Math.round(p.spread * 100)}%` : "-"} />
+        <Fact k="Broker gap" v={p.spread != null ? `${Math.round(p.spread * 100)}%` : "-"} />
         <div className="col-span-2 -mt-4 text-xs text-muted md:col-span-4">
           {p.price ? <>{p.quote_type === "transacted" ? <>The price you paid. </> : <>Computed from the strongest quote type: <b className="font-medium text-ink">{cap(p.quote_type)}</b>. </>}</> : "No quotes yet. "}
           {p.spread >= spreadAlert / 100 && <span className="text-red-500">Brokers differ by {Math.round(p.spread * 100)}% ({pkr(lo)} to {pkr(hi)}). </span>}
@@ -168,7 +168,7 @@ export default function Plot({ params }: { params: Promise<{ id: string }> }) {
 
       <BuildableSummary plotId={id} />
 
-      {money && <FinancialSummary plotId={id} />}
+      {money && <FinancialSummary plotId={id} bought={p.status === "bought"} />}
 
       <TaskSummary plotId={id} />
 
