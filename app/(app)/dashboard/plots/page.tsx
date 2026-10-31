@@ -76,7 +76,10 @@ export default function Plots() {
           <h1 className="text-2xl font-semibold tracking-tight">Plots</h1>
           <p className="mt-1 text-sm text-muted">{plots.length} tracked</p>
         </div>
+        <div className="flex items-center gap-2">
+        {can(me, "feasibility", "c") && can(me, "plots", "c") && <Link href="/dashboard/calculator" className="rounded-lg bg-line/50 px-4 py-2.5 text-sm font-medium hover:bg-line">Calculator</Link>}
         <Can area="plots"><Link href="/dashboard/plots/new" className="rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-bg hover:opacity-90">Add plot</Link></Can>
+        </div>
       </div>
 
       <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">

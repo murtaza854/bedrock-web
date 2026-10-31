@@ -213,55 +213,23 @@ test.describe("Quick feasibility", () => {
     await expect(page.getByText("Needs bifurcation of the plot.")).toBeVisible();
   });
 
-  test("floor groups and sellable shares: a report's floors go in as they are, and survive saving and editing", async ({ page, plot }) => {
-    const p = await plot({ area: "Report Town", size_sqyd: 516 });
-    await page.goto(`/dashboard/plots/${p.id}/feasibility`);
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.getByLabel("Ground floor (sq ft)").fill("3086"); // banking hall: 85% sellable at 250,000
-    await page.getByLabel("Sale price per sq ft (PKR)").fill("250000");
-    await page.getByLabel("Sellable share (%)").fill("85");
-    await page.getByRole("button", { name: "Next" }).click();
+  test("a scenario with a sellable share set in the detailed model is not opened in the quick form, so the share cannot be lost", async ({ page, plot, request }) => {
+    const p = await plot({ area: "Detailed Town", size_sqyd: 400 });
+    const m = await (await request.post(`${API}/plots/${p.id}/financial-models`, { data: { name: "Detailed" } })).json();
+    const floors = [{ label: "Ground", floor_type: "ground", use: "shop", built_area_sqft: 3000, sellable_ratio: 0.8, ratio_verification: "claimed", price_mode: "per_sqft", price_per_sqft: 120000, fixed_unit_price: 0, unit_count: 0, price_basis_confirmed: false, price_verification: "claimed" }];
+    expect((await request.put(`${API}/financial-models/${m.id}`, { data: { ...m, floors, construction_per_sqft: 6000, land_price: 100_000_000, land_price_basis: "manual", target_margin: 0.2 } })).ok()).toBeTruthy();
+    await page.goto(`/dashboard/plots/${p.id}/feasibility?scenario=${m.id}`);
+    await expect(page.getByText(/a sellable share/)).toBeVisible();
+    await expect(page.getByText(/can only be edited in the detailed model/)).toBeVisible();
+  });
 
-    const L = (base: string, g: number) => (g === 1 ? base : `${base}, group ${g}`);
-    const group = async (g: number, name: string, count: string, area: string) => {
-      await page.getByLabel(L("Group name", g), { exact: true }).fill(name);
-      await page.getByLabel(L("Number of floors above ground", g), { exact: true }).fill(count);
-      await page.getByLabel(L("Area of each floor (sq ft)", g), { exact: true }).fill(area);
-      await page.getByLabel(L("Sellable share (%)", g), { exact: true }).fill("75");
-      await page.getByLabel(g === 1 ? "Sale price per sq ft (PKR), offices" : `Sale price per sq ft (PKR), offices, group ${g}`, { exact: true }).fill("45000");
-    };
-    await group(1, "Mezzanine", "1", "3086");
-    await page.getByRole("button", { name: "Add another group of floors" }).click();
-    await group(2, "Floors 1 to 2", "2", "3811");
-    await page.getByRole("button", { name: "Add another group of floors" }).click();
-    await group(3, "Floors 3 to 11", "9", "3066");
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.getByRole("button", { name: "No basement" }).click();
-    await page.getByLabel("Construction cost per sq ft (PKR), same for every floor").fill("10000");
-    await page.getByLabel("Land price in PKR").fill("1000000000");
-    await page.getByRole("button", { name: "Next" }).click();
-    await page.getByLabel("Years").fill("3");
-    await page.getByRole("button", { name: "Work it out" }).click();
-
-    // 655,775,000 ground + 104,152,500 mezzanine + 257,242,500 floors 1-2 + 931,297,500 floors 3-11
-    await expect(page.getByRole("row", { name: /^Revenue/ })).toContainText("1,948,467,500");
-    await expect(page.getByText("3,086 sq ft × 85% sellable = 2,623.1 sq ft × 250,000 = 655,775,000")).toBeVisible();
-    await expect(page.getByText("9 × 3,066 = 27,594 sq ft × 75% sellable = 20,695.5 sq ft × 45,000 = 931,297,500")).toBeVisible();
-    await expect(page.getByText("3,086 + 38,302 = 41,388 sq ft × 10,000 construction = 413,880,000")).toBeVisible(); // construction counts the whole covered area, sold or not
-    await page.getByRole("button", { name: "Save as a scenario" }).click();
-    await expect(page).toHaveURL(/\/dashboard\/plots\/\d+$/);
-
-    const scenario = page.locator("li", { has: page.locator("summary", { hasText: "Demand" }) });
-    await scenario.locator("summary").click();
-    await expect(scenario.getByRole("row", { name: /^Revenue/ })).toContainText("1,948,467,500");
-    await scenario.getByRole("link", { name: "Edit this scenario" }).click(); // the groups come back as they were entered
-    await page.getByRole("button", { name: "Next" }).click();
-    await expect(page.getByLabel("Sellable share (%)")).toHaveValue("85");
-    await page.getByRole("button", { name: "Next" }).click();
-    await expect(page.getByLabel("Group name", { exact: true })).toHaveValue("Mezzanine");
-    await expect(page.getByLabel("Group name, group 2")).toHaveValue("Floors 1 to 2");
-    await expect(page.getByLabel("Group name, group 3")).toHaveValue("Floors 3 to 11");
-    await expect(page.getByLabel("Number of floors above ground, group 3")).toHaveValue("9");
-    await expect(page.getByLabel("Sellable share (%), group 3")).toHaveValue("75");
+  test("floors that differ in size or price (groups) are for the detailed model, so the quick form will not open them", async ({ page, plot, request }) => {
+    const p = await plot({ area: "Detailed Town", size_sqyd: 400 });
+    const m = await (await request.post(`${API}/plots/${p.id}/financial-models`, { data: { name: "Groups" } })).json();
+    const floor = (label: string, type: string, area: number, price: number) => ({ label, floor_type: type, use: "office", built_area_sqft: area, sellable_ratio: 1, ratio_verification: "claimed", price_mode: "per_sqft", price_per_sqft: price, fixed_unit_price: 0, unit_count: 0, price_basis_confirmed: false, price_verification: "claimed" });
+    const floors = [floor("Ground", "ground", 3000, 120000), floor("Floor 1", "upper", 3800, 45000), floor("Floor 2", "upper", 3000, 45000)]; // not the same size
+    expect((await request.put(`${API}/financial-models/${m.id}`, { data: { ...m, floors, construction_per_sqft: 6000, land_price: 100_000_000, land_price_basis: "manual", target_margin: 0.2 } })).ok()).toBeTruthy();
+    await page.goto(`/dashboard/plots/${p.id}/feasibility?scenario=${m.id}`);
+    await expect(page.getByText(/floors that differ in size, price or use/)).toBeVisible();
   });
 });

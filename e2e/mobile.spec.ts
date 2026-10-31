@@ -16,7 +16,7 @@ test("every page fits a phone screen", async ({ page, plot, request }) => {
 
   const paths = ["/dashboard", "/dashboard/plots", "/dashboard/plots/new", `/dashboard/plots/${p.id}`, `/dashboard/plots/${p.id}/edit`, `/dashboard/plots/${p.id}/setup`,
     `/dashboard/plots/${p.id}/feasibility`, `/dashboard/plots/${p.id}/financials`, `/dashboard/plots/${p.id}/report`, `/dashboard/plots/${p.id}/score`,
-    "/dashboard/tasks", "/dashboard/offers", "/dashboard/offers/new", `/dashboard/offers/${n.id}`, "/dashboard/contacts", "/dashboard/contacts/new", "/dashboard/bylaws", "/dashboard/bylaws/new",
+    "/dashboard/tasks", "/dashboard/calculator", "/dashboard/offers", "/dashboard/offers/new", `/dashboard/offers/${n.id}`, "/dashboard/contacts", "/dashboard/contacts/new", "/dashboard/bylaws", "/dashboard/bylaws/new",
     "/dashboard/scorecard", "/dashboard/scorecard/rules", "/dashboard/settings", "/dashboard/settings/rates", "/dashboard/map", "/dashboard/account", "/dashboard/admin", "/login", "/forgot"];
   const bad: string[] = [];
   for (const path of paths) {

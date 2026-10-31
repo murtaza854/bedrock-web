@@ -2,16 +2,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Book, MapIcon, Check, Gauge, Logout, People, Shield, Sliders, Tag, User, Overview, Panel, Plots } from "./icons";
+import { Book, Calc, MapIcon, Check, Gauge, Logout, People, Shield, Sliders, Tag, User, Overview, Panel, Plots } from "./icons";
 import { can, useMe } from "@/lib/auth";
 import { useSettings } from "@/lib/settings";
 import { ThemeToggle } from "./theme-toggle";
 
-type L = { href: string; label: string; icon: React.ReactNode; area: string; exact?: boolean };
+type L = { href: string; label: string; icon: React.ReactNode; area: string; exact?: boolean; also?: [string, "c" | "u"] }; // also: a second thing the role must be able to do
 const LINKS: L[] = [
   { href: "/dashboard", label: "Overview", icon: <Overview />, area: "plots", exact: true },
   { href: "/dashboard/tasks", label: "Tasks", icon: <Check />, area: "tasks" },
   { href: "/dashboard/plots", label: "Plots", icon: <Plots />, area: "plots" },
+  { href: "/dashboard/calculator", label: "Calculator", icon: <Calc />, area: "feasibility", also: ["plots", "c"] }, // adds a plot and a scenario
   { href: "/dashboard/map", label: "Map", icon: <MapIcon />, area: "map" },
   { href: "/dashboard/offers", label: "Offers", icon: <Tag />, area: "offers" },
   { href: "/dashboard/contacts", label: "Contacts", icon: <People />, area: "contacts" },
@@ -51,7 +52,7 @@ export function Sidebar() {
             className={`hidden rounded-md p-2 text-muted hover:bg-line/50 hover:text-ink md:block ${collapsed ? "mx-auto" : ""}`}><Panel /></button>
         </div>
         <nav className="mt-6 grid min-h-0 gap-1 overflow-y-auto">
-          {LINKS.filter((l) => can(me, l.area)).map((l) => {
+          {LINKS.filter((l) => can(me, l.area) && (!l.also || can(me, l.also[0], l.also[1]))).map((l) => {
             const active = l.exact ? path === l.href : path === l.href || path.startsWith(l.href + "/");
             return (
               <Link key={l.href} href={l.href} title={collapsed ? l.label : undefined} aria-current={active ? "page" : undefined}
