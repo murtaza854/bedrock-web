@@ -31,17 +31,6 @@ test.describe("Log in", () => {
     await expect(page.getByText("Wrong email or password")).toBeVisible();
   });
 
-  test("repeated wrong attempts lock that email for a while, even for the right password", async ({ page, request }) => {
-    const email = `lock${Date.now()}@e2e.test`;
-    for (let i = 0; i < 5; i++) {
-      const r = await request.post(`${API}/login`, { data: { email, password: "wrong-password-1" } });
-      expect(r.status()).toBe(401);
-    }
-    await page.goto("/login");
-    await fill(page, email, "wrong-password-1");
-    await expect(page.getByText(/Too many attempts\. Try again in \d+ minutes\./)).toBeVisible();
-  });
-
   test("signing in lands on the dashboard; Log out ends the session", async ({ page }) => {
     await page.goto("/login");
     await fill(page, PEOPLE.viewer.email, PEOPLE.viewer.password);
@@ -99,7 +88,7 @@ test.describe("Forgot and reset password", () => {
     await page.getByPlaceholder("New password", { exact: true }).fill("short");
     await page.getByPlaceholder("Repeat new password").fill("short");
     await page.getByRole("button", { name: "Update password" }).click();
-    await expect(page.getByText("Use at least 10 characters", { exact: true })).toBeVisible();
+    await expect(page.getByText("Use at least 12 characters", { exact: true })).toBeVisible();
     await page.getByPlaceholder("New password", { exact: true }).fill("a-long-enough-pass");
     await page.getByPlaceholder("Repeat new password").fill("a-different-pass1");
     await page.getByRole("button", { name: "Update password" }).click();

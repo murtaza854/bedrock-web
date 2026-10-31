@@ -35,35 +35,34 @@ function Users() {
   const [msg, setMsg] = useState("");
   const load = () => get("/admin/users").then(setRows);
   useEffect(() => { load(); }, []);
-  const act = async (fn: () => Promise<unknown>, ok = "") => { setMsg(""); try { await fn(); setConfirm(null); setPw(null); setMsg(ok); load(); } catch (x) { setMsg((x as Error).message); } };
+  const act = async (fn: () => Promise<unknown>, ok = "") => { setMsg(""); try { await fn(); setConfirm(null); setPw(null); if (ok) setMsg(ok); load(); } catch (x) { setMsg((x as Error).message); } };
 
   const create = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
     const err: Errors = {};
     if (!/^\S+@\S+\.\S+$/.test(f.email)) err.email = "Enter a valid email address";
-    if (f.password.length < 10) err.password = "Use at least 10 characters";
     setErrors(err);
     if (Object.keys(err).length) return;
-    try { await post("/admin/users", { ...f, role }); setAdd(false); setErrors({}); load(); } catch (x) { setErrors({ form: (x as Error).message }); }
+    try { const r = await post("/admin/users", { ...f, role }); setAdd(false); setErrors({}); showInvite(f.email, r); load(); } catch (x) { setErrors({ form: (x as Error).message }); }
   };
+  const showInvite = (email: string, r: { link: string; emailed: boolean }) => setMsg(`${r.emailed ? `Invitation emailed to ${email}. ` : "Email isn't set up, so send them this link yourself. "}It works once, for three days: ${r.link}`);
   const setPassword = async (e: React.FormEvent<HTMLFormElement>, id: number) => {
     e.preventDefault();
     const p = String(new FormData(e.currentTarget).get("password") ?? "");
-    if (p.length < 10) return setErrors({ pw: "Use at least 10 characters" });
+    if (p.length < 12) return setErrors({ pw: "Use at least 12 characters" });
     setErrors({}); act(() => post(`/admin/users/${id}/password`, { password: p }), "Password set. They were signed out everywhere.");
   };
   if (!rows) return null;
   return (
     <div className="grid gap-8">
-      <div className="flex items-center justify-between"><p className="text-sm text-muted">{rows.length} people</p><Button onClick={() => { setErrors({}); setAdd(!add); }}>{add ? "Cancel" : "Add a person"}</Button></div>
+      <div className="flex items-center justify-between"><p className="text-sm text-muted">{rows.length} people</p><Button onClick={() => { setErrors({}); setAdd(!add); }}>{add ? "Cancel" : "Invite a person"}</Button></div>
       {add && (
         <form onSubmit={create} noValidate className="grid items-start gap-4 md:grid-cols-4">
           <div><Lbl>Email</Lbl><Field name="email" type="email" error={errors.email} autoFocus /></div>
           <div><Lbl>Name (optional)</Lbl><Field name="name" /></div>
           <div><Lbl>Role</Lbl><Select label="Role" value={role} onChange={setRole} options={roles.map((r) => ({ value: r, label: cap(r) }))} /></div>
-          <div><Lbl>Starting password</Lbl><Field name="password" type="password" autoComplete="new-password" error={errors.password} /></div>
-          <div className="flex items-center gap-3 md:col-span-4"><Button>Add person</Button><p className="text-xs text-muted">Tell them the password in person, and ask them to change it and turn on two-factor.</p>{errors.form && <p role="alert" className="text-sm text-red-500">{errors.form}</p>}</div>
+          <div className="flex items-center gap-3 md:col-span-4"><Button>Invite person</Button><p className="text-xs text-muted">They get a link to choose their own password, then turn on two-factor.</p>{errors.form && <p role="alert" className="text-sm text-red-500">{errors.form}</p>}</div>
         </form>
       )}
       {msg && <p role="status" className="text-sm text-muted">{msg}</p>}
@@ -73,7 +72,7 @@ function Users() {
           const self = u.email === me?.email, off = !!u.disabled_at;
           return (
             <tr key={u.id} className={`border-t border-line align-top ${off ? "opacity-50" : ""}`}>
-              <td className="py-3"><span className="font-medium">{u.name || u.email}</span>{self && <span className="ml-2"><Badge>You</Badge></span>}{off && <span className="ml-2"><Badge tone="bad">Switched off</Badge></span>}
+              <td className="py-3"><span className="font-medium">{u.name || u.email}</span>{self && <span className="ml-2"><Badge>You</Badge></span>}{off && <span className="ml-2"><Badge tone="bad">Switched off</Badge></span>}{u.invited && <span className="ml-2"><Badge tone="warn">Invited</Badge></span>}
                 {u.name && <p className="text-xs text-muted">{u.email}</p>}</td>
               <td><Select label={`Role of ${u.email}`} variant="ghost" className="-ml-2" value={u.role} disabled={self} onChange={(v) => act(() => patch(`/admin/users/${u.id}`, { role: v }), `${u.email} is now ${/^[aeiou]/i.test(v) ? "an" : "a"} ${v}. They were signed out.`)} options={roles.map((r) => ({ value: r, label: cap(r) }))} /></td>
               <td>{u.totp_enabled ? <Badge tone="good">On</Badge> : <Badge tone="warn">Off</Badge>}</td>
@@ -85,6 +84,7 @@ function Users() {
                   <span><button onClick={() => act(() => confirm.endsWith("2fa") ? post(`/admin/users/${u.id}/reset-2fa`, {}) : patch(`/admin/users/${u.id}`, { disabled: !off }), confirm.endsWith("2fa") ? "Two-factor reset. They can set it up again." : "")} className="text-red-500">Confirm</button><button onClick={() => setConfirm(null)} className="ml-3 text-muted">Cancel</button></span>
                 ) : (
                   <span className="flex flex-wrap justify-end gap-x-4 gap-y-1 text-muted">
+                    {u.invited && <button onClick={() => act(async () => showInvite(u.email, await post(`/admin/users/${u.id}/invite`, {})))} className="hover:text-ink">New invite link</button>}
                     <button onClick={() => { setErrors({}); setPw(u.id); }} className="hover:text-ink">Set password</button>
                     {u.totp_enabled && <button onClick={() => setConfirm(`${u.id}:2fa`)} className="hover:text-ink">Reset two-factor</button>}
                     {!self && <button onClick={() => setConfirm(`${u.id}:off`)} className="hover:text-ink">{off ? "Switch on" : "Switch off"}</button>}

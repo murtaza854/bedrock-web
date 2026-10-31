@@ -25,32 +25,31 @@ test.describe("People", () => {
     await expect(table).not.toContainText("Lawyer");
   });
 
-  test("adding a person checks the form, refuses a duplicate, and the new person can sign in", async ({ as }) => {
+  test("inviting a person checks the form, refuses a duplicate, shows the one-time link and marks them Invited", async ({ as }) => {
     const { page, request } = await as(PEOPLE.owner);
     const email = `added${Date.now()}@e2e.test`;
     await page.goto("/dashboard/admin");
-    await page.getByRole("button", { name: "Add a person" }).click();
-    await page.getByRole("button", { name: "Add person" }).click();
+    await page.getByRole("button", { name: "Invite a person" }).click();
+    await page.getByRole("button", { name: "Invite person" }).click();
     await expect(page.getByText("Enter a valid email address")).toBeVisible();
-    await expect(page.getByText("Use at least 10 characters")).toBeVisible();
 
     await page.locator('input[name="email"]').fill(email);
     await page.locator('input[name="name"]').fill("Added Person");
     await page.getByRole("combobox", { name: "Role", exact: true }).click();
     await page.getByRole("option", { name: "Viewer" }).click();
-    await page.locator('input[name="password"]').fill("Starting-pass-1");
-    await page.getByRole("button", { name: "Add person" }).click();
+    await page.getByRole("button", { name: "Invite person" }).click();
+    await expect(page.getByRole("status")).toContainText("/welcome?token=");
     await expect(row(page, email)).toContainText("Added Person");
+    await expect(row(page, email)).toContainText("Invited");
     await expect(page.getByRole("combobox", { name: `Role of ${email}` })).toContainText("Viewer");
 
-    await page.getByRole("button", { name: "Add a person" }).click(); // the same email again
+    await page.getByRole("button", { name: "Invite a person" }).click(); // the same email again
     await page.locator('input[name="email"]').fill(email);
-    await page.locator('input[name="password"]').fill("Starting-pass-1");
-    await page.getByRole("button", { name: "Add person" }).click();
+    await page.getByRole("button", { name: "Invite person" }).click();
     await expect(page.getByText("someone with that email already exists")).toBeVisible();
 
     const them = await pwRequest.newContext();
-    await login(them, email, "Starting-pass-1");
+    expect((await them.post(`${API}/login`, { data: { email, password: "Starting-pass-1" } })).status()).toBe(401); // no password exists until they choose one
     await them.dispose();
     expect((await request.get(`${API}/admin/users`)).status()).toBe(200);
   });
@@ -87,7 +86,7 @@ test.describe("People", () => {
     await row(page, who.email).getByRole("button", { name: "Set password" }).click();
     await page.getByPlaceholder("New password").fill("short");
     await page.getByRole("button", { name: "Set", exact: true }).click();
-    await expect(page.getByText("Use at least 10 characters")).toBeVisible();
+    await expect(page.getByText("Use at least 12 characters")).toBeVisible();
     await page.getByPlaceholder("New password").fill("Reset-by-owner-1");
     await page.getByRole("button", { name: "Set", exact: true }).click();
     await expect(page.getByRole("status")).toContainText("Password set. They were signed out everywhere.");

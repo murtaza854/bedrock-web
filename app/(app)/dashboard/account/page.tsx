@@ -31,7 +31,7 @@ function Password() {
     const el = e.currentTarget, f = Object.fromEntries(new FormData(el)) as Record<string, string>;
     const err: Errors = {};
     if (!f.current) err.current = "Enter your current password";
-    if (f.next.length < 10) err.next = "Use at least 10 characters";
+    if (f.next.length < 12) err.next = "Use at least 12 characters";
     if (f.again !== f.next) err.again = "The two passwords don't match";
     setErrors(err); setDone(false);
     if (Object.keys(err).length) return;
@@ -149,6 +149,7 @@ export default function Account() {
         <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
         <p className="mt-1 text-sm text-muted">{m.email} · <Badge>{cap(m.role)}</Badge></p>
       </div>
+      {m.must_setup_2fa && <p role="status" className="rounded-xl bg-line/40 px-5 py-4 text-sm"><b className="font-medium">{m.onboarding ? "Step 2 of 3: " : ""}Turn on two-factor sign-in to continue.</b> {m.onboarding ? "Scan the code below with an authenticator app, then enter the 6-digit code it shows. Step 3 is saving your backup codes." : "Bedrock requires it for everyone. Set it up below with an authenticator app, and keep the backup codes somewhere safe."}</p>}
       {m.dev ? (
         <p className="rounded-xl bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">Login is switched off while you build (<code>DEV_NO_AUTH</code>), so there is no password, two-factor or session to manage. Everyone is treated as an owner. Run the API with <code>make run DEV_NO_AUTH=0</code> to use real accounts.</p>
       ) : (

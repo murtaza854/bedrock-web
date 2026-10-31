@@ -37,7 +37,7 @@ test.describe("Password", () => {
     await page.goto("/dashboard/account");
     await page.getByRole("button", { name: "Change password" }).click();
     await expect(page.getByText("Enter your current password")).toBeVisible();
-    await expect(page.getByText("Use at least 10 characters")).toBeVisible();
+    await expect(page.getByText("Use at least 12 characters")).toBeVisible();
     await page.locator('input[name="current"]').fill("Fresh-pass-12345");
     await page.locator('input[name="next"]').fill("Brand-new-pass-1");
     await page.locator('input[name="again"]').fill("Something-else-12");
@@ -78,7 +78,7 @@ test.describe("Password", () => {
     expect(same.status()).toBe(400);
     const email = await request.post(`${API}/account/password`, { data: { current: who.password, new: who.email } });
     expect(email.status()).toBe(400);
-    expect(await email.text()).toContain("must not be the email");
+    expect(await email.text()).toContain("must not contain the email");
   });
 });
 

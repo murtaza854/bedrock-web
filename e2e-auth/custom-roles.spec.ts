@@ -152,7 +152,7 @@ test.describe("Custom roles", () => {
     await expect(row).toBeVisible();
 
     await page.getByRole("button", { name: "Users", exact: true }).click(); // the new role can be given to a person
-    await page.getByRole("button", { name: "Add a person" }).click();
+    await page.getByRole("button", { name: "Invite a person" }).click();
     await page.getByRole("combobox", { name: "Role", exact: true }).click();
     await expect(page.getByRole("option", { name: new RegExp(name, "i") })).toBeVisible();
     await page.keyboard.press("Escape");

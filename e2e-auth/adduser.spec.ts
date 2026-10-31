@@ -8,8 +8,8 @@ const BIN = join(process.env.TMPDIR || "/tmp", "bedrock-e2e-auth-api");
 const ADMIN = process.env.E2E_ADMIN_URL ?? "postgres://murtaza854@localhost:5432/postgres";
 const base = ADMIN.slice(0, ADMIN.lastIndexOf("/"));
 const KEY = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
-const run = (db: string, args: string[], input = "") =>
-  spawnSync(BIN, ["adduser", ...args], { env: { ...process.env, DATABASE_URL: `${base}/${db}`, DOCS_KEY: KEY, DOCS_DIR: join(process.env.TMPDIR || "/tmp", "bedrock-adduser-docs") }, input, encoding: "utf8" });
+const run = (db: string, args: string[], input = "", cmd = "adduser") =>
+  spawnSync(BIN, [cmd, ...args], { env: { ...process.env, DATABASE_URL: `${base}/${db}`, DOCS_KEY: KEY, DOCS_DIR: join(process.env.TMPDIR || "/tmp", "bedrock-adduser-docs") }, input, encoding: "utf8" });
 const psql = (db: string, sql: string) => execFileSync("psql", [`${base}/${db}`, "-tAq", "-c", sql], { encoding: "utf8" }).trim();
 
 test.describe("make adduser", () => {
@@ -23,24 +23,28 @@ test.describe("make adduser", () => {
     expect(people.some((u: any) => u.email.startsWith("late"))).toBe(false); // nobody was added, and nobody changed
   });
 
-  test("on an empty database it makes one owner, asks twice, checks the password, writes the audit log, then closes", async () => {
+  test("on an empty database it makes one owner with no password, prints a link to choose one, writes the audit log, then closes", async () => {
     const db = "bedrock_e2e_adduser";
     execFileSync("psql", [`${ADMIN}`, "-q", "-c", `drop database if exists ${db} with (force)`, "-c", `create database ${db}`]);
     try {
       execFileSync("psql", [`${base}/${db}`, "-q", "-v", "ON_ERROR_STOP=1", "-f", "../bedrock-api/schema.sql"], { env: { ...process.env, PGOPTIONS: "--client-min-messages=warning" } });
-      expect(run(db, ["first@e2e.test", "viewer"], "First-pass-12345\nFirst-pass-12345\n").stderr).toContain("must be an owner");
-      expect(run(db, ["not-an-email"], "First-pass-12345\nFirst-pass-12345\n").stderr).toContain("valid email");
-      expect(run(db, ["first@e2e.test"], "First-pass-12345\nSomething-else-1\n").stderr).toContain("not the same");
-      expect(run(db, ["first@e2e.test"], "short\nshort\n").stderr).toContain("at least 10 characters");
+      expect(run(db, ["first@e2e.test", "viewer"]).stderr).toContain("must be an owner");
+      expect(run(db, ["not-an-email"]).stderr).toContain("valid email");
       expect(psql(db, "select count(*) from users")).toBe("0"); // none of that created anyone
 
-      const ok = run(db, ["First@E2E.test"], "First-pass-12345\nFirst-pass-12345\n");
+      const ok = run(db, ["First@E2E.test"]);
       expect(ok.status, ok.stderr).toBe(0);
-      expect(psql(db, "select email || ' ' || role from users")).toBe("first@e2e.test owner");
+      expect(ok.stderr).toMatch(/\/welcome\?token=[0-9a-f]{20,}/);
+      expect(psql(db, "select email || ' ' || role || ' ' || onboarding || ' ' || (password_hash = '!') from users")).toBe("first@e2e.test owner true true");
       expect(psql(db, "select count(*) from audit_log where action like 'first owner created%'")).toBe("1");
-      const again = run(db, ["second@e2e.test"], "Second-pass-12345\nSecond-pass-12345\n");
+      const again = run(db, ["second@e2e.test"]);
       expect(again.status).not.toBe(0);
       expect(psql(db, "select count(*) from users")).toBe("1");
+
+      const fresh = run(db, ["first@e2e.test"], "", "invite"); // `make invite` gives a new link while no password is chosen
+      expect(fresh.status, fresh.stderr).toBe(0);
+      expect(fresh.stderr).toContain("/welcome?token=");
+      expect(fresh.stderr).not.toBe(ok.stderr);
     } finally {
       execFileSync("psql", [`${ADMIN}`, "-q", "-c", `drop database if exists ${db} with (force)`]);
     }

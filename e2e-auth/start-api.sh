@@ -13,10 +13,11 @@ cd ../bedrock-api
 BIN="$TMP/bedrock-e2e-auth-api"
 go build -o "$BIN" .
 export DATABASE_URL="${ADMIN%/*}/$DB" DEV_NO_AUTH=0 BACKUPS=0 PORT=8102 WEB_ORIGIN=http://localhost:3102 \
-  DOCS_DIR="$TMP/bedrock-e2e-auth-docs" BACKUP_DIR="$TMP/bedrock-e2e-auth-backups" MAIL_OUTBOX="$TMP/bedrock-e2e-auth-mail" \
+  DOCS_DIR="$TMP/bedrock-e2e-auth-docs" BACKUP_DIR="$TMP/bedrock-e2e-auth-backups" MAIL_OUTBOX="$TMP/bedrock-e2e-auth-mail" LOGIN_DELAY_MS=400 LOGIN_RATE_PER_MIN=1000 \
   DOCS_KEY=00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff
 # make adduser only creates the very first owner, so the three test people are inserted directly (bcrypt hashes of the passwords in fixtures.ts)
 psql "${ADMIN%/*}/$DB" -q -v ON_ERROR_STOP=1 <<'SQL'
+insert into settings(key, value) values ('require_2fa', '0'); -- the shared test people have no authenticator; the test that needs the rule turns it on and back off
 insert into users(email, password_hash, role) values
   ('owner@e2e.test',  '$2a$10$XvNwidDwG/RD.QgQhWP76.NtWjRpyXGH6U0xNSIFvL0ZAZ9xqTzt2', 'owner'),
   ('editor@e2e.test', '$2a$10$GGYMAwDZ8RtdFfvHSS3CX.fpRqP0NPQiFu4vnxvVenAARnk5NPRKK', 'editor'),
