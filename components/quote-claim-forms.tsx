@@ -1,6 +1,8 @@
 "use client";
-import { useState } from "react";
-import { post } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { get, post } from "@/lib/api";
+import { FACT_NAMES } from "@/lib/facts";
+import type { PlotFile } from "@/components/files";
 import { cap } from "@/lib/plots";
 import { Button } from "@/components/ui/button";
 import { Errors, Field, required } from "@/components/ui/field";
@@ -21,6 +23,7 @@ function useSave(plotId: string | number, kind: "quote" | "claim", rules: Errors
     setErrors(err);
     if (Object.keys(err).length) return;
     if (f.price_pkr) f.price_pkr = Number(f.price_pkr);
+    if (f.file_id) f.file_id = Number(f.file_id); else delete f.file_id; // a fact may point at one of the plot's files
     try { await post(`/plots/${plotId}/${kind}s`, f); }
     catch { return setErrors({ form: "Could not save, try again" }); }
     el.reset(); onSaved(f);
@@ -44,12 +47,16 @@ export function QuoteForm({ plotId, onSaved }: { plotId: string | number; onSave
 
 export function ClaimForm({ plotId, onSaved }: { plotId: string | number; onSaved: (f: any) => void }) {
   const { errors, submit } = useSave(plotId, "claim", { field: "Enter a field", value: "Enter a value" }, onSaved);
+  const [files, setFiles] = useState<PlotFile[]>([]);
+  useEffect(() => { get(`/plots/${plotId}/files`).then(setFiles).catch(() => {}); }, [plotId]);
   return (
     <form onSubmit={submit} noValidate className="grid items-start gap-3 md:grid-cols-5">
-      <Field name="field" placeholder="Field (e.g. corner, title)" error={errors.field} autoFocus />
+      <Field name="field" list="fact-names" placeholder="Field (e.g. corner, road_width_ft)" error={errors.field} autoFocus autoComplete="off" />
+      <datalist id="fact-names">{FACT_NAMES.map((n) => <option key={n} value={n} />)}</datalist>
       <Field name="value" placeholder="Value" error={errors.value} />
       <Field name="source" placeholder="Source" />
       <Select name="verification" label="Verification level" defaultValue="claimed" options={LEVELS.slice(0, 1).concat(LEVELS.slice(2)).map((t) => ({ value: t, label: cap(t) }))} />
+      {files.length > 0 && <Select name="file_id" label="Source file" defaultValue="" options={[{ value: "", label: "No source file" }, ...files.map((x) => ({ value: String(x.id), label: x.label }))]} />}
       <Button>Save claim</Button>
       {errors.form && <p role="alert" className="text-sm text-red-500 md:col-span-5">{errors.form}</p>}
     </form>

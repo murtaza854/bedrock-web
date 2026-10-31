@@ -6,6 +6,7 @@ import { DOT, STATUSES, cap, label, ppsy } from "@/lib/plots";
 import { Badge, levelTone } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { ClaimForm, LEVELS, QuoteForm } from "@/components/quote-claim-forms";
+import { FilesSection, PlotFile, fileUrl } from "@/components/files";
 import { RejectDialog } from "@/components/reject-dialog";
 import { PurchaseDialog } from "@/components/purchase-dialog";
 import { PurchaseSummary } from "@/components/purchase-summary";
@@ -52,8 +53,10 @@ export default function Plot({ params }: { params: Promise<{ id: string }> }) {
   const [rejecting, setRejecting] = useState<any>(null);
   const [buying, setBuying] = useState<any>(null);
   const [statusErr, setStatusErr] = useState("");
+  const [files, setFiles] = useState<PlotFile[]>([]);
+  const loadFiles = () => get(`/plots/${id}/files`).then(setFiles).catch(() => {});
   const load = () => get(`/plots/${id}`).then(setD);
-  useEffect(() => { load(); get("/plots").then(setAll); }, [id]);
+  useEffect(() => { load(); get("/plots").then(setAll); loadFiles(); }, [id]);
   // arriving from an accepted offer: /plots/1?buy=1 opens the purchase form
   useEffect(() => { if (d && can(me, "offers", "c") && new URLSearchParams(location.search).get("buy") === "1" && d.plot.status !== "bought") setBuying(d.plot); }, [d?.plot?.id, me?.role]);
 
@@ -152,7 +155,7 @@ export default function Plot({ params }: { params: Promise<{ id: string }> }) {
                     <Badge tone={levelTone[g.best.verification]}>{cap(g.best.verification)}</Badge>
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-muted">{g.best.source || "No source"} · {day(g.best.created_at)}</p>
+                <p className="mt-1 text-xs text-muted">{g.best.source || "No source"} · {day(g.best.created_at)}{files.find((x) => x.id === g.best.file_id) && <> · <a href={fileUrl(g.best.file_id)} target="_blank" rel="noreferrer" className="underline hover:text-ink">{files.find((x) => x.id === g.best.file_id)!.label}</a></>}</p>
                 {g.rest.map((c: any) => (
                   <p key={c.id} className="mt-1 text-xs text-muted">Also: {c.value} ({cap(c.verification).toLowerCase()}, {c.source || "no source"}, {day(c.created_at)})</p>
                 ))}
@@ -161,6 +164,8 @@ export default function Plot({ params }: { params: Promise<{ id: string }> }) {
           </ul>
         ) : <p className="text-sm text-muted">No claims yet. Record what you know and where it came from.</p>}
       </Section>
+
+      <FilesSection plotId={id} files={files} canAdd={can(me, "plots", "c")} canDelete={can(me, "plots", "d")} onChange={() => { loadFiles(); load(); }} />
 
       <LocationSummary plot={p} />
 

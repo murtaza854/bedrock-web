@@ -1,4 +1,4 @@
-import { API, expect, test } from "./fixtures";
+import { API, MAP_PNG, expect, test } from "./fixtures";
 
 test.describe("Add plot: area list", () => {
   test("offers used areas first, filters loosely, and accepts a new name", async ({ page, plot }) => {
@@ -96,7 +96,7 @@ test.describe("Plot list", () => {
 test.describe("Add plot: setup steps", () => {
   test("after adding, quotes, facts, a task and an offer can each be added or skipped", async ({ page }) => {
     await page.goto("/dashboard/plots/new");
-    await expect(page.getByRole("progressbar", { name: "Step 1 of 5" })).toBeVisible();
+    await expect(page.getByRole("progressbar", { name: "Step 1 of 6" })).toBeVisible();
     await page.getByRole("combobox", { name: "Area" }).fill("Wizard Town");
     await page.getByRole("combobox", { name: "Area" }).press("Escape");
     await page.locator('input[name="plot_no"]').fill("W-1");
@@ -105,11 +105,17 @@ test.describe("Add plot: setup steps", () => {
     await page.getByRole("option", { name: "Commercial" }).click();
     await page.getByRole("button", { name: "Add plot" }).click();
     await expect(page.getByRole("heading", { name: "Quotes" })).toBeVisible();
-    await expect(page.getByRole("progressbar", { name: "Step 2 of 5" })).toBeVisible();
+    await expect(page.getByRole("progressbar", { name: "Step 2 of 6" })).toBeVisible();
     await page.getByPlaceholder("Broker", { exact: true }).fill("Ali");
     await page.getByPlaceholder("Price (PKR)").fill("620000000");
     await page.getByRole("button", { name: "Save quote" }).click();
     await expect(page.getByText("Saved: Ali")).toBeVisible();
+    await page.getByRole("button", { name: "Next" }).click();
+    await expect(page.getByRole("heading", { name: "Files" })).toBeVisible();
+    await page.locator('input[type="file"]').setInputFiles({ name: "lease.png", mimeType: "image/png", buffer: MAP_PNG });
+    await page.getByLabel("File label").fill("Lease deed");
+    await page.getByRole("button", { name: "Upload" }).click();
+    await expect(page.getByText("Saved: Lease deed")).toBeVisible();
     await page.getByRole("button", { name: "Next" }).click();
     await expect(page.getByRole("heading", { name: "Facts" })).toBeVisible();
     await page.getByRole("button", { name: "Skip" }).click(); // nothing added here

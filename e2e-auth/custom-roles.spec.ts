@@ -55,6 +55,19 @@ test.describe("Custom roles", () => {
     expect((await owner.delete(`${API}/admin/roles/${id}`)).ok()).toBeTruthy();
   });
 
+  test("a role that can only read plots can open a plot's files but not add or delete them", async ({ as, owner, newPerson }) => {
+    const plot = await (await owner.post(`${API}/plots`, { data: plotBody("FILE") })).json();
+    const mine = await (await owner.post(`${API}/plots/${plot.id}/files`, { multipart: { file: { name: "a.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64") }, label: "Lease" } })).json();
+    const name = unique("FileReader");
+    expect((await owner.post(`${API}/admin/roles`, { data: { name, perms: { plots: "r" } } })).ok()).toBeTruthy();
+    const { request } = await as(await newPerson(name));
+    expect((await request.get(`${API}/plots/${plot.id}/files`)).status()).toBe(200);
+    expect((await request.get(`${API}/files/${mine.id}`)).status()).toBe(200);
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+    expect((await request.post(`${API}/plots/${plot.id}/files`, { multipart: { file: { name: "b.png", mimeType: "image/png", buffer: png } } })).status()).toBe(403);
+    expect((await request.delete(`${API}/files/${mine.id}`)).status()).toBe(403);
+  });
+
   test("a role with Admin access cannot manage roles or take over an owner", async ({ as, owner, newPerson }) => {
     const name = unique("Helper");
     expect((await owner.post(`${API}/admin/roles`, { data: { name, perms: { plots: "r", admin: "crud" } } })).ok()).toBeTruthy();

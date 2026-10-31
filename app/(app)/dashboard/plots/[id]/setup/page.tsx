@@ -10,6 +10,7 @@ import { Errors, Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 import { StepBar } from "@/components/step-bar";
 import { ClaimForm, QuoteForm } from "@/components/quote-claim-forms";
+import { FileUpload, savedNote } from "@/components/files";
 
 // The steps after "Add plot". Every step can be skipped; whatever is saved shows under the form so you can add several.
 function Form({ plotId, onSaved, offer }: { plotId: string; onSaved: (s: string) => void; offer: boolean }) {
@@ -53,7 +54,7 @@ export default function Setup({ params }: { params: Promise<{ id: string }> }) {
   const me = useMe();
   const [plot, setPlot] = useState<any>(null);
   const [step, setStep] = useState(0);
-  const [saved, setSaved] = useState<string[][]>([[], [], [], []]);
+  const [saved, setSaved] = useState<string[][]>([[], [], [], [], []]);
   useEffect(() => { get(`/plots/${id}`).then((d) => setPlot(d.plot)); }, [id]);
   if (!plot || !me) return null;
 
@@ -61,6 +62,7 @@ export default function Setup({ params }: { params: Promise<{ id: string }> }) {
   // each step is offered only if the role may create that kind of thing
   const steps = [
     { name: "Quotes", hint: "What brokers are asking for this plot.", body: <QuoteForm plotId={id} onSaved={(f) => add(`${f.broker}, ${pkr(f.price_pkr)}`)} /> },
+    { name: "Files", hint: "The lease, a report page or a photo. You can link a fact to a file in the next step.", body: <FileUpload plotId={id} onUploaded={(f) => add(savedNote(f))} /> },
     { name: "Facts", hint: "What you know about it, and where you heard it.", body: <ClaimForm plotId={id} onSaved={(f) => add(`${f.field}: ${f.value}`)} /> },
     ...(can(me, "tasks", "c") ? [{ name: "Tasks", hint: "Anything you need to do about this plot.", body: <Form plotId={id} offer={false} onSaved={add} /> }] : []),
     ...(can(me, "offers", "c") ? [{ name: "Offers", hint: "A price on the table, if a negotiation has started.", body: <Form plotId={id} offer onSaved={add} /> }] : []),
