@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { get, post } from "@/lib/api";
+import { del, get, post } from "@/lib/api";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Entry, Model, Output, amt, pct } from "@/lib/feasibility";
 
 const Line = ({ k, area = "", rate = "", v, strong }: { k: string; area?: string; rate?: string; v: string; strong?: boolean }) => (
@@ -32,9 +33,24 @@ function Table({ m, o }: { m: Model; o: Output }) {
   );
 }
 
+// Edit, make primary (the one the list and the scorecard use), or delete: asks first.
+function Actions({ m, plotId, edit, onChange }: { m: Model; plotId: string; edit: boolean; onChange: () => void }) {
+  const [asking, setAsking] = useState(false);
+  const btn = "rounded-lg bg-line/50 px-3.5 py-2 text-xs font-medium hover:bg-line";
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-2">
+      {edit && <Link href={`/dashboard/plots/${plotId}/feasibility?scenario=${m.id}`} className={btn}>Edit this scenario</Link>}
+      {!m.is_primary && <button type="button" onClick={() => post(`/financial-models/${m.id}/primary`, {}).then(onChange)} className={btn}>Make primary</button>}
+      <button type="button" onClick={() => setAsking(true)} className={btn}>Delete</button>
+      <ConfirmDialog open={asking} title={`Delete ${m.name}?`} text="This removes the scenario and its numbers. It cannot be undone." confirm="Delete scenario"
+        onClose={() => setAsking(false)} onConfirm={() => del(`/financial-models/${m.id}`).then(onChange)} />
+    </div>
+  );
+}
+
 // One scenario. With several buildings there are three views: each building on its own, and the two combined.
 // A building on its own gets its share of the land (the land split equally), worked out by the same calculation.
-function Scenario({ m, o, plotId }: { m: Model; o: Output; plotId: string }) {
+function Scenario({ m, o, plotId, onChange }: { m: Model; o: Output; plotId: string; onChange: () => void }) {
   const nums = [...new Set(m.floors.map((f) => building(f.label)?.[1]).filter(Boolean))] as string[];
   const [view, setView] = useState("all");
   const [part, setPart] = useState<{ view: string; m: Model; o: Output } | null>(null);
@@ -54,14 +70,15 @@ function Scenario({ m, o, plotId }: { m: Model; o: Output; plotId: string }) {
               className={`rounded-lg px-3 py-1.5 ${view === k ? "bg-ink text-bg" : "bg-line/50 hover:bg-line"}`}>{text}</button>))}
         </div>)}
       {shown && <Table m={shown.m} o={shown.o} />}
-      <Link href={`/dashboard/plots/${plotId}/feasibility?scenario=${m.id}`} className="mt-3 inline-block text-xs text-muted underline hover:text-ink">Edit this scenario</Link>
+      <Actions m={m} plotId={plotId} edit onChange={onChange} />
     </div>
   );
 }
 
 export function FinancialSummary({ plotId, bought }: { plotId: string; bought: boolean }) {
   const [list, setList] = useState<Entry[] | null>(null);
-  useEffect(() => { get(`/plots/${plotId}/financial-models`).then(setList).catch(() => setList([])); }, [plotId]);
+  const load = () => get(`/plots/${plotId}/financial-models`).then(setList).catch(() => setList([]));
+  useEffect(() => { load(); }, [plotId]);
   if (!list) return null;
   return (
     <section className="border-t border-line pt-5">
@@ -78,8 +95,11 @@ export function FinancialSummary({ plotId, bought }: { plotId: string; bought: b
                 <span className="text-muted">{errors?.length || !o ? "Incomplete" : `Profit ${amt(o.profit)} · ${pct(o.margin_on_cost)} on cost`}</span>
               </summary>
               {errors?.length || !o ? (
-                <ul className="mt-3 grid gap-1 text-xs text-muted">{(errors ?? []).map((e) => <li key={e.field + e.message}>{e.message}</li>)}</ul>
-              ) : <Scenario m={m} o={o} plotId={plotId} />}
+                <>
+                  <ul className="mt-3 grid gap-1 text-xs text-muted">{(errors ?? []).map((e) => <li key={e.field + e.message}>{e.message}</li>)}</ul>
+                  <Actions m={m} plotId={plotId} edit={false} onChange={load} />
+                </>
+              ) : <Scenario m={m} o={o} plotId={plotId} onChange={load} />}
             </details>
           </li>))}</ul>
       ) : <p className="mt-4 text-sm text-muted">No model yet. Work out what this plot can pay for the land.</p>}

@@ -49,7 +49,7 @@ export function Combobox({ options, first = [], name, defaultValue = "", placeho
     <div ref={root} className="relative">
       <input name={name} value={text} placeholder={placeholder} autoFocus={autoFocus} autoComplete="off" aria-label={label} aria-invalid={!!error}
         role="combobox" aria-expanded={open} aria-autocomplete="list" className={fieldBase}
-        onChange={(e) => { setText(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} onClick={() => setOpen(true)} onKeyDown={keys} />
+        onChange={(e) => { setText(e.target.value); setOpen(true); }} onClick={() => setOpen(true)} onKeyDown={keys} />
       {error && <p role="alert" className="mt-1.5 text-xs text-red-500">{error}</p>}
       {open && rows > 0 && (
         <ul ref={list} role="listbox" aria-label={label} className="absolute left-0 z-30 mt-1.5 max-h-64 w-full overflow-auto rounded-xl border border-line bg-surface p-1 shadow-lg shadow-black/5">

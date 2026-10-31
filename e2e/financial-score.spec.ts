@@ -104,8 +104,9 @@ test.describe("The scorecard reads the primary financial model", () => {
     await setWeight(request, f, 5);
     try {
       const p = await plot({});
-      await goldenModel(request, p.id, "Good", "document_verified"); // the first model is primary
-      const weak = await goldenModel(request, p.id, "Weak", "claimed");
+      const good = await goldenModel(request, p.id, "Good", "document_verified");
+      const weak = await goldenModel(request, p.id, "Weak", "claimed"); // the newest model is primary
+      expect((await request.post(`${API}/financial-models/${good.id}/primary`, { data: {} })).ok()).toBeTruthy();
       expect((await financial(request, p.id, "fin_margin")).status).toBe("scored");
       expect((await request.post(`${API}/financial-models/${weak.id}/primary`, { data: {} })).ok()).toBeTruthy();
       expect((await financial(request, p.id, "fin_margin")).status).toBe("unverified");

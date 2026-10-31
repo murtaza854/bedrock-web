@@ -20,8 +20,14 @@ const f = (x: number) => x.toLocaleString("en-US");
 const Q = ({ k, children }: { k: string; children: React.ReactNode }) => <label className="block"><span className="mb-1.5 block text-xs text-muted">{k}</span>{children}</label>;
 
 // One building's answers. With two buildings each has its own.
-type Bld = { gSqft: string; gPrice: string; uCount: string; uSqft: string; uPrice: string; sold: string; bCount: string; bSqft: string };
-const blank = (): Bld => ({ gSqft: "", gPrice: "", uCount: "", uSqft: "", uPrice: "", sold: "office", bCount: "", bSqft: "" });
+// Floors above ground come in groups: floors of the same size, price and sellable share (a mezzanine, floors 1 to 2, floors 3 to 11).
+type Grp = { name: string; count: string; sqft: string; sell: string; sold: string; price: string };
+const blankGrp = (): Grp => ({ name: "", count: "", sqft: "", sell: "100", sold: "office", price: "" });
+type Bld = { gSqft: string; gPrice: string; gSell: string; ups: Grp[]; bCount: string; bSqft: string };
+const blank = (): Bld => ({ gSqft: "", gPrice: "", gSell: "100", ups: [blankGrp()], bCount: "", bSqft: "" });
+const SOLD = [{ value: "office", label: "Offices" }, { value: "apartment", label: "Apartments" }, { value: "shop", label: "Shops" }];
+// the name a group's floors carry: "Mezzanine", or "Floors 1 to 2 1" and "Floors 1 to 2 2" when it has several. Unnamed: "Floor 1", "Floor 2".
+const floorLabel = (name: string, j: number, count: number) => { const nm = name.trim(); return nm && count === 1 && !/\d$/.test(nm) ? nm : `${nm || "Floor"} ${j + 1}`; };
 type Step = { k: "b" | "c" | "t" | "r" } | { k: "g" | "u" | "s"; i: number };
 const stepsFor = (N: number): Step[] => [{ k: "b" }, ...Array.from({ length: N }, (_, i): Step[] => [{ k: "g", i }, { k: "u", i }, { k: "s", i }]).flat(), { k: "c" }, { k: "t" }, { k: "r" }];
 
@@ -42,15 +48,21 @@ function fromModel(m: any): { bl: Bld[]; v: Record<string, string>; buildings: s
   const groups = new Map<string, any[]>();
   for (const x of m.floors as any[]) { const k = /^Building (\d+) – /.exec(x.label)?.[1] ?? "1"; groups.set(k, [...(groups.get(k) ?? []), x]); }
   const s = (x: number) => (x ? String(x) : "");
-  const same = (xs: any[], ...keys: string[]) => xs.every((x) => keys.every((k) => x[k] === xs[0][k]));
   const bl: Bld[] = [];
   for (const fl of [...groups.entries()].sort(([a], [b]) => Number(a) - Number(b)).map(([, g]) => g)) {
     const g = fl.filter((x) => x.floor_type === "ground"), up = fl.filter((x) => x.floor_type === "upper"), bs = fl.filter((x) => x.floor_type === "basement");
-    if (g.length !== 1 || g.length + up.length + bs.length !== fl.length || !same(up, "built_area_sqft", "price_per_sqft", "use") || !same(bs, "built_area_sqft")
-      || fl.some((x) => x.price_mode !== "per_sqft" || (x.floor_type !== "basement" && x.sellable_ratio !== 1) || (x.floor_type === "basement" && (x.sellable_ratio !== 0 || x.price_per_sqft !== 0))))
-      return "This scenario has details the quick form cannot show (several uses or a sellable share), so it can only be edited in the detailed model.";
-    bl.push({ gSqft: s(g[0].built_area_sqft), gPrice: s(g[0].price_per_sqft), uCount: s(up.length), uSqft: s(up[0]?.built_area_sqft), uPrice: s(up[0]?.price_per_sqft),
-      sold: up[0]?.use === "apartment" ? "apartment" : "office", bCount: s(bs.length), bSqft: s(bs[0]?.built_area_sqft) });
+    if (g.length !== 1 || g.length + up.length + bs.length !== fl.length || bs.some((x) => x.built_area_sqft !== bs[0].built_area_sqft || x.sellable_ratio !== 0 || x.price_per_sqft !== 0)
+      || fl.some((x) => x.price_mode !== "per_sqft" || !["shop", "office", "apartment", "other"].includes(x.use) || (x.floor_type !== "basement" && !(x.sellable_ratio > 0))))
+      return "This scenario has details the quick form cannot show (a different price basis, floor type or use), so it can only be edited in the detailed model.";
+    const pct = (r: number) => String(Math.round(r * 10000) / 100);
+    const ups: Grp[] = [];
+    for (const x of up) {
+      const nm = String(x.label).replace(/^Building \d+ – /, "").replace(/\s\d+$/, "");
+      const cand: Grp = { name: nm === "Floor" ? "" : nm, count: "1", sqft: s(x.built_area_sqft), sell: pct(x.sellable_ratio), sold: ["apartment", "shop"].includes(x.use) ? x.use : "office", price: s(x.price_per_sqft) };
+      const last = ups[ups.length - 1], key = (q: Grp) => [q.name, q.sqft, q.sell, q.sold, q.price].join("|");
+      if (last && key(last) === key(cand)) last.count = String(Number(last.count) + 1); else ups.push(cand);
+    }
+    bl.push({ gSqft: s(g[0].built_area_sqft), gPrice: s(g[0].price_per_sqft), gSell: pct(g[0].sellable_ratio), ups: ups.length ? ups : [blankGrp()], bCount: s(bs.length), bSqft: s(bs[0]?.built_area_sqft) });
   }
   if (m.costs.some((c: any) => c.amount || c.rate) || bl.length > 2) return "This scenario has other costs, so it can only be edited in the detailed model.";
   return { bl, buildings: String(bl.length), v: { rate: s(m.construction_per_sqft), tYears: s(Math.floor(m.construction_months / 12)), tMonths: s(m.construction_months % 12) } };
@@ -87,8 +99,10 @@ export default function Feasibility({ params }: { params: Promise<{ id: string }
   const RESULT = steps.length - 1;
   const cur = steps[step];
   const months = n(v.tYears) * 12 + n(v.tMonths); // construction time, for the monthly and annual profit
-  const upd = (i: number, k: keyof Bld, val: string) => setBl((all) => all.map((b, j) => (j === i ? { ...b, [k]: val } : b)));
-  const num = (i: number, k: keyof Bld, ph: string) => <Input type="number" min={0} step="any" value={bl[i][k]} onChange={(e) => upd(i, k, e.target.value)} placeholder={ph} />;
+  const upd = (i: number, k: "gSqft" | "gPrice" | "gSell" | "bCount" | "bSqft", val: string) => setBl((all) => all.map((b, j) => (j === i ? { ...b, [k]: val } : b)));
+  const updG = (i: number, gi: number, k: keyof Grp, val: string) => setBl((all) => all.map((b, j) => (j === i ? { ...b, ups: b.ups.map((g, q) => (q === gi ? { ...g, [k]: val } : g)) } : b)));
+  const num = (i: number, k: "gSqft" | "gPrice" | "gSell" | "bCount" | "bSqft", ph: string) => <Input type="number" min={0} step="any" value={bl[i][k]} onChange={(e) => upd(i, k, e.target.value)} placeholder={ph} />;
+  const numG = (i: number, gi: number, k: "count" | "sqft" | "sell" | "price", ph: string) => <Input type="number" min={0} step="any" value={bl[i].ups[gi][k]} onChange={(e) => updG(i, gi, k, e.target.value)} placeholder={ph} />;
   const numV = (k: keyof typeof v, ph: string) => <Input type="number" min={0} step="any" value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value })} placeholder={ph} />;
 
   // a model of the given buildings with the given amount of land. Several buildings together get "Building 2 – " labels.
@@ -97,8 +111,8 @@ export default function Feasibility({ params }: { params: Promise<{ id: string }
     const floors = idx.flatMap((i) => {
       const b = bl[i], pre = idx.length > 1 ? `Building ${i + 1} – ` : "";
       return [
-        floor({ label: `${pre}Ground`, floor_type: "ground", use: "shop", built_area_sqft: n(b.gSqft), price_per_sqft: n(b.gPrice) }),
-        ...Array.from({ length: n(b.uCount) }, (_, j) => floor({ label: `${pre}Floor ${j + 1}`, floor_type: "upper", use: b.sold, built_area_sqft: n(b.uSqft), price_per_sqft: n(b.uPrice) })),
+        floor({ label: `${pre}Ground`, floor_type: "ground", use: "shop", built_area_sqft: n(b.gSqft), sellable_ratio: n(b.gSell) / 100, price_per_sqft: n(b.gPrice) }),
+        ...b.ups.flatMap((g) => Array.from({ length: n(g.count) }, (_, j) => floor({ label: `${pre}${floorLabel(g.name, j, n(g.count))}`, floor_type: "upper", use: g.sold, built_area_sqft: n(g.sqft), sellable_ratio: n(g.sell) / 100, price_per_sqft: n(g.price) }))),
         ...Array.from({ length: n(b.bCount) }, (_, j) => floor({ label: `${pre}Basement ${j + 1}`, floor_type: "basement", use: "other", built_area_sqft: n(b.bSqft), sellable_ratio: 0 })),
       ];
     });
@@ -109,8 +123,9 @@ export default function Feasibility({ params }: { params: Promise<{ id: string }
   const model = (l: { label: string; cr: string }) => modelOf(all, Math.round(n(l.cr)), l.label);
 
   const ready = (): boolean => {
-    if (cur.k === "g") return n(bl[cur.i].gSqft) > 0 && n(bl[cur.i].gPrice) > 0;
-    if (cur.k === "u") return n(bl[cur.i].uCount) === 0 || (n(bl[cur.i].uSqft) > 0 && n(bl[cur.i].uPrice) > 0);
+    const share = (x: string) => n(x) > 0 && n(x) <= 100;
+    if (cur.k === "g") return n(bl[cur.i].gSqft) > 0 && n(bl[cur.i].gPrice) > 0 && share(bl[cur.i].gSell);
+    if (cur.k === "u") return bl[cur.i].ups.every((g) => n(g.count) === 0 || (n(g.sqft) > 0 && n(g.price) > 0 && share(g.sell)));
     if (cur.k === "s") return n(bl[cur.i].bCount) === 0 || n(bl[cur.i].bSqft) > 0;
     if (cur.k === "c") return n(v.rate) > 0 && lands.every((l) => l.label.trim() && n(l.cr) > 0);
     if (cur.k === "t") return months > 0;
@@ -146,22 +161,26 @@ export default function Feasibility({ params }: { params: Promise<{ id: string }
 
   const who = "i" in cur && N > 1 ? `Building ${cur.i + 1}: ` : "";
   const title = { b: "Buildings", g: `${who}Ground floor`, u: `${who}Upper floors`, s: `${who}Basement`, c: "Cost and land", t: "Construction time", r: "Result" }[cur.k];
-  const asked = { b: "How many buildings, and what the land is. Each building gets its own answers and its own result.", g: "Projected ground floor area and what you expect to sell it for.",
-    u: "How many floors above ground, the same size each, and whether they are sold as offices or apartments.", s: "Floors below ground, for parking for example. They are built and cost money but are not sold. No basement? Leave it blank.",
+  const asked = { b: "How many buildings, and what the land is. Each building gets its own answers and its own result.", g: "Projected ground floor area, the share of it you can sell, and what you expect to sell it for.",
+    u: "Floors above ground, in groups of floors that share a size and a price (a mezzanine, floors 1 to 2, floors 3 to 11). Most plots need just one group.", s: "Floors below ground, for parking for example. They are built and cost money but are not sold. No basement? Leave it blank.",
     c: "What building costs per sq ft, and what you would pay for the land. Add a row for each price you want to compare.", t: "How long construction takes, for every building. The profit per month and per year is worked out from it.", r: "" }[cur.k];
   const gArea = (i: number) => Math.round((plot.size_sqyd / N) * 9 * COVERAGE);
 
   // the answers for one building, with the working, as you would do it by hand
+  const sellable = (area: number, sell: number) => (sell === 1 ? "" : ` × ${Math.round(sell * 10000) / 100}% sellable = ${f(area * sell)} sq ft`);
+  const builtOf = (i: number) => n(bl[i].gSqft) + bl[i].ups.reduce((a, g) => a + n(g.count) * n(g.sqft), 0) + n(bl[i].bCount) * n(bl[i].bSqft);
   const entered = (i: number, pre: string): [string, string][] => {
-    const b = bl[i], g = n(b.gSqft), up = n(b.uCount) * n(b.uSqft), bs = n(b.bCount) * n(b.bSqft), built = g + up + bs;
+    const b = bl[i], g = n(b.gSqft), gs = n(b.gSell) / 100, bs = n(b.bCount) * n(b.bSqft), built = builtOf(i), upArea = built - g - bs;
     return [
-      [`${pre}Ground floor`, `${f(g)} sq ft × ${f(n(b.gPrice))} = ${f(g * n(b.gPrice))}`],
-      ...(n(b.uCount) > 0 ? [[`${pre}Upper floors (${b.sold}s)`, `${f(n(b.uCount))} × ${f(n(b.uSqft))} = ${f(up)} sq ft × ${f(n(b.uPrice))} = ${f(up * n(b.uPrice))}`] as [string, string]] : []),
+      [`${pre}Ground floor`, `${f(g)} sq ft${sellable(g, gs)} × ${f(n(b.gPrice))} = ${f(Math.round(g * gs * n(b.gPrice)))}`],
+      ...b.ups.filter((u) => n(u.count) > 0).map((u): [string, string] => {
+        const c = n(u.count), a = n(u.sqft), sl = n(u.sell) / 100;
+        return [`${pre}${u.name.trim() || "Upper floors"} (${u.sold}s)`, `${f(c)} × ${f(a)} = ${f(c * a)} sq ft${sellable(c * a, sl)} × ${f(n(u.price))} = ${f(Math.round(a * sl * n(u.price)) * c)}`];
+      }),
       ...(n(b.bCount) > 0 ? [[`${pre}Basement`, `${f(n(b.bCount))} × ${f(n(b.bSqft))} = ${f(bs)} sq ft, not sold`] as [string, string]] : []),
-      [`${pre}Built area`, `${f(g)}${up ? ` + ${f(up)}` : ""}${bs ? ` + ${f(bs)}` : ""} = ${f(built)} sq ft × ${f(n(v.rate))} construction = ${f(built * n(v.rate))}`],
+      [`${pre}Built area`, `${f(g)}${upArea ? ` + ${f(upArea)}` : ""}${bs ? ` + ${f(bs)}` : ""} = ${f(built)} sq ft × ${f(n(v.rate))} construction = ${f(built * n(v.rate))}`],
     ];
   };
-  const builtOf = (i: number) => n(bl[i].gSqft) + n(bl[i].uCount) * n(bl[i].uSqft) + n(bl[i].bCount) * n(bl[i].bSqft);
   const combined = N === 1 || view === N;
   const rows: [string, string][] = [
     ...(N > 1 && combined ? [["Buildings", `${N}, each on ${f(plot.size_sqyd / N)} sq yd (${f((plot.size_sqyd / N) * 9)} sq ft). The land price is for all the land, each building gets half.`] as [string, string]] : []),
@@ -188,13 +207,25 @@ export default function Feasibility({ params }: { params: Promise<{ id: string }
           <Q k="The land is"><Select label="The land is" value={parts} onChange={setParts} options={[{ value: "1", label: "One plot" }, { value: "2", label: "Two plots joined (like 167 & 169)" }]} /></Q>
           {process(parts, buildings) && <p className="text-sm sm:col-span-2">{process(parts, buildings)} <span className="text-muted">Any fee is not included.</span></p>}
         </>}
-        {cur.k === "g" && <><Q k="Ground floor (sq ft)">{num(cur.i, "gSqft", "e.g. 1650")}</Q><Q k="Sale price per sq ft (PKR)">{num(cur.i, "gPrice", "e.g. 120000")}</Q>
+        {cur.k === "g" && <><Q k="Ground floor (sq ft)">{num(cur.i, "gSqft", "e.g. 1650")}</Q><Q k="Sale price per sq ft (PKR)">{num(cur.i, "gPrice", "e.g. 120000")}</Q><Q k="Sellable share (%)">{num(cur.i, "gSell", "e.g. 85")}</Q><div />
           <Suggest text={`(${Math.round(COVERAGE * 100)}% of ${N === 1 ? "the plot" : "half the plot"})`} value={gArea(cur.i)} current={bl[cur.i].gSqft} use={() => upd(cur.i, "gSqft", String(gArea(cur.i)))} />
-          {cur.i > 0 && <p className="text-xs text-muted sm:col-span-2"><button type="button" onClick={() => setBl((all) => all.map((b, j) => (j === cur.i ? { ...all[0] } : b)))} className="underline hover:text-ink">Copy everything from Building 1</button>, then change what differs.</p>}</>}
-        {cur.k === "u" && <><Q k="Number of floors above ground">{num(cur.i, "uCount", "e.g. 4")}</Q><Q k="Area of each floor (sq ft)">{num(cur.i, "uSqft", "e.g. 2040")}</Q>
-          <Suggest text="(same as the ground floor)" value={n(bl[cur.i].gSqft)} current={bl[cur.i].uSqft} use={() => upd(cur.i, "uSqft", bl[cur.i].gSqft)} />
-          <Q k="Sold as"><Select label="Sold as" value={bl[cur.i].sold} onChange={(x) => upd(cur.i, "sold", x)} options={[{ value: "office", label: "Offices" }, { value: "apartment", label: "Apartments" }]} /></Q>
-          <Q k={`Sale price per sq ft (PKR), ${bl[cur.i].sold}s`}>{num(cur.i, "uPrice", "e.g. 30000")}</Q></>}
+          {cur.i > 0 && <p className="text-xs text-muted sm:col-span-2"><button type="button" onClick={() => setBl((all) => all.map((b, j) => (j === cur.i ? { ...all[0], ups: all[0].ups.map((u) => ({ ...u })) } : b)))} className="underline hover:text-ink">Copy everything from Building 1</button>, then change what differs.</p>}</>}
+        {cur.k === "u" && <>
+          {bl[cur.i].ups.map((g, gi) => {
+            const sfx = gi === 0 ? "" : `, group ${gi + 1}`;
+            return (
+              <div key={gi} className="grid gap-4 rounded-lg border border-line p-4 sm:col-span-2 sm:grid-cols-2">
+                <Q k={`Group name${sfx}`}><Input value={g.name} onChange={(e) => updG(cur.i, gi, "name", e.target.value)} placeholder="e.g. Mezzanine, Floors 1 to 2" /></Q><div />
+                <Q k={`Number of floors above ground${sfx}`}>{numG(cur.i, gi, "count", "e.g. 4")}</Q><Q k={`Area of each floor (sq ft)${sfx}`}>{numG(cur.i, gi, "sqft", "e.g. 2040")}</Q>
+                <Suggest text="(same as the ground floor)" value={n(bl[cur.i].gSqft)} current={g.sqft} use={() => updG(cur.i, gi, "sqft", bl[cur.i].gSqft)} />
+                <Q k={`Sold as${sfx}`}><Select label={`Sold as${sfx}`} value={g.sold} onChange={(x) => updG(cur.i, gi, "sold", x)} options={SOLD} /></Q>
+                <Q k={`Sellable share (%)${sfx}`}>{numG(cur.i, gi, "sell", "e.g. 75")}</Q>
+                <Q k={`Sale price per sq ft (PKR), ${g.sold}s${sfx}`}>{numG(cur.i, gi, "price", "e.g. 30000")}</Q>
+                {gi > 0 && <div className="flex items-end"><Button type="button" variant="ghost" onClick={() => setBl((all) => all.map((b, j) => (j === cur.i ? { ...b, ups: b.ups.filter((_, q) => q !== gi) } : b)))}>Remove this group</Button></div>}
+              </div>);
+          })}
+          <button type="button" onClick={() => setBl((all) => all.map((b, j) => (j === cur.i ? { ...b, ups: [...b.ups, blankGrp()] } : b)))} className="text-left text-sm text-muted hover:text-ink sm:col-span-2">+ Add another group of floors</button>
+        </>}
         {cur.k === "s" && <><Q k="Number of basement floors">{num(cur.i, "bCount", "e.g. 2")}</Q><Q k="Area of each basement floor (sq ft)">{num(cur.i, "bSqft", "e.g. 1800")}</Q></>}
         {cur.k === "t" && <><Q k="Years">{numV("tYears", "e.g. 2")}</Q><Q k="Months">{numV("tMonths", "e.g. 6")}</Q></>}
         {cur.k === "c" && <>
@@ -212,7 +243,7 @@ export default function Feasibility({ params }: { params: Promise<{ id: string }
       {cur.k === "r" && <>
         {N > 1 && <div className="mt-6 flex gap-2 text-sm">{views.map((t, i) => (
           <button key={t} type="button" aria-pressed={view === i} onClick={() => setView(i)} className={`rounded-lg px-3.5 py-2 ${view === i ? "bg-ink text-bg" : "bg-line/50 hover:bg-line"}`}>{t}</button>))}</div>}
-        <dl className="mt-6 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[11rem_1fr]">{rows.map(([k, x]) => <div key={k} className="contents"><dt className="text-muted">{k}</dt><dd>{x}</dd></div>)}</dl>
+        <dl className="mt-6 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[11rem_1fr]">{rows.map(([k, x], q) => <div key={`${q}${k}`} className="contents"><dt className="text-muted">{k}</dt><dd>{x}</dd></div>)}</dl>
         <table className="mt-6 w-full text-sm">
           <thead><tr className="text-xs text-muted"><th className="pb-2 text-left font-normal">PKR{N > 1 ? `, ${views[view]}` : ""}</th>{lands.map((l) => <th key={l.label} className="pb-2 text-right font-normal">{l.label}</th>)}</tr></thead>
           <tbody>{([["Revenue", "revenue"], ["Construction", "construction"], ["Land", "land"], ["Total cost", "total_cost"], ["Profit", "profit"]] as const).map(([k, fld], r) => (

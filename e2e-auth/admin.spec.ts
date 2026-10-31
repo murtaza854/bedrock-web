@@ -16,12 +16,13 @@ test.describe("People", () => {
     await expect(page.getByRole("combobox", { name: `Role of ${PEOPLE.viewer.email}` })).toContainText("Viewer");
   });
 
-  test("the role list explains each role, and there is no lawyer role any more", async ({ as }) => {
+  test("the Roles tab lists the built-in roles, and there is no lawyer role any more", async ({ as }) => {
     const { page } = await as(PEOPLE.owner);
     await page.goto("/dashboard/admin");
-    const roles = page.locator("section", { has: page.getByRole("heading", { name: "What each role can do" }) });
-    for (const r of ["Owner", "Editor", "Viewer"]) await expect(roles).toContainText(r);
-    await expect(roles).not.toContainText("Lawyer");
+    await page.getByRole("button", { name: "Roles", exact: true }).click();
+    const table = page.getByRole("table");
+    for (const r of ["Owner", "Editor", "Viewer"]) await expect(table.getByRole("row", { name: new RegExp(`^${r}`) })).toContainText("Built in");
+    await expect(table).not.toContainText("Lawyer");
   });
 
   test("adding a person checks the form, refuses a duplicate, and the new person can sign in", async ({ as }) => {
@@ -195,11 +196,44 @@ test.describe("Audit log", () => {
 });
 
 test.describe("Backups", () => {
+  test("the backup schedule is chosen in Admin: on or off, which days, and what time", async ({ as }) => {
+    const { page, request } = await as(PEOPLE.owner);
+    await page.goto("/dashboard/admin");
+    await page.getByRole("button", { name: "Backups", exact: true }).click();
+    await expect(page.getByLabel("Make a backup automatically")).toBeChecked(); // the default: every day
+    for (const day of ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]) await expect(page.getByRole("button", { name: day, exact: true })).toHaveAttribute("aria-pressed", "true");
+
+    await page.getByRole("button", { name: "Sat", exact: true }).click();
+    await page.getByRole("button", { name: "Sun", exact: true }).click();
+    await page.getByLabel("Backup time").fill("03:30");
+    await page.getByRole("button", { name: "Save schedule" }).click();
+    await expect(page.getByText("Saved.")).toBeVisible();
+    let s = (await (await request.get(`${API}/admin/backups`)).json()).schedule;
+    expect(s).toEqual({ enabled: true, days: [1, 2, 3, 4, 5], time: "03:30" });
+
+    await page.reload(); // it is remembered
+    await page.getByRole("button", { name: "Backups", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Sat", exact: true })).toHaveAttribute("aria-pressed", "false");
+    await expect(page.getByLabel("Backup time")).toHaveValue("03:30");
+
+    await page.getByLabel("Make a backup automatically").uncheck(); // switched off
+    await expect(page.getByLabel("Backup time")).toBeDisabled();
+    await page.getByRole("button", { name: "Save schedule" }).click();
+    await expect(page.getByText("Saved.")).toBeVisible();
+    expect((await (await request.get(`${API}/admin/backups`)).json()).schedule.enabled).toBe(false);
+
+    // the server refuses nonsense, and "on" with no days
+    expect((await request.put(`${API}/admin/backup-schedule`, { data: { enabled: true, days: [], time: "03:30" } })).status()).toBe(400);
+    expect((await request.put(`${API}/admin/backup-schedule`, { data: { enabled: true, days: [1], time: "25:99" } })).status()).toBe(400);
+    expect((await request.put(`${API}/admin/backup-schedule`, { data: { enabled: true, days: [9], time: "03:30" } })).status()).toBe(400);
+    expect((await request.put(`${API}/admin/backup-schedule`, { data: { enabled: true, days: [0, 1, 2, 3, 4, 5, 6], time: "02:00" } })).ok()).toBeTruthy(); // back to the default
+  });
+
   test("Back up now makes a backup that is checked by reading it back", async ({ as }) => {
     const { page, request } = await as(PEOPLE.owner);
     await page.goto("/dashboard/admin");
-    await page.getByRole("button", { name: "Backups" }).click();
-    await expect(page.getByText("Automatic backups are switched off on this server.")).toBeVisible();
+    await page.getByRole("button", { name: "Backups", exact: true }).click();
+    await expect(page.getByText(/switched off on the server itself/)).toBeVisible(); // the test server runs with BACKUPS=0
     await page.getByRole("button", { name: "Back up now" }).click();
     const first = page.locator("tbody tr").first();
     await expect(first).toContainText("By hand");

@@ -149,7 +149,7 @@ export default function Overview() {
         <Kpi label="Median confirmed / sq yd" value={med(conf, MIN_N) ?? "-"} sub={`n=${conf?.n ?? 0}${med(conf, MIN_N) ? "" : ", not enough data"}`} />
         <Kpi label="Asking to confirmed" value={gap == null ? "-" : pct(-gap)} sub={gap == null ? "needs 3+ of each" : "typical discount"} />
         <Kpi label="Quotes this week" value={s.totals.quotes_week} />
-        <Kpi label="Brokers disagree" value={s.totals.spread_wide} sub={`plots with ${spread_alert_pct}%+ spread`} />
+        <Kpi label="Brokers disagree" value={s.totals.spread_wide} sub={`plots with a ${spread_alert_pct}%+ broker gap`} />
       </div>
 
       <div className="grid gap-10 lg:grid-cols-2">

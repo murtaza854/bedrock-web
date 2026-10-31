@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { get, patch, pkr } from "@/lib/api";
+import { pct } from "@/lib/feasibility";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -10,8 +11,8 @@ import { PurchaseDialog } from "@/components/purchase-dialog";
 import { DOT, STATUSES, label, ppsy } from "@/lib/plots";
 import { useSettings } from "@/lib/settings";
 
-type SortKey = "label" | "size" | "price" | "ppsy" | "n" | "spread";
-const val = (p: any, k: SortKey) => (k === "label" ? label(p) : k === "size" ? p.size_sqyd : k === "ppsy" ? ppsy(p) : p[k]);
+type SortKey = "label" | "size" | "price" | "ppsy" | "n" | "spread" | "feas";
+const val = (p: any, k: SortKey) => (k === "label" ? label(p) : k === "size" ? p.size_sqyd : k === "ppsy" ? ppsy(p) : k === "feas" ? p.feasibility?.margin_on_cost : p[k]);
 
 export default function Plots() {
   const { spread_alert_pct: spreadAlert, default_profile } = useSettings();
@@ -93,7 +94,7 @@ export default function Plots() {
       <table className="mt-6 w-full text-sm">
         <thead>
           <tr className="border-b border-line">
-            {th("label", "Plot", false)}<th className="pb-3 pl-6 text-left text-xs font-normal text-muted">Use</th>{th("size", "Size")}{th("price", "Price")}{th("ppsy", "Per sq yd")}{th("n", "Quotes")}{th("spread", "Broker gap")}
+            {th("label", "Plot", false)}<th className="pb-3 pl-6 text-left text-xs font-normal text-muted">Use</th>{th("size", "Size")}{th("price", "Price")}{th("ppsy", "Per sq yd")}{th("n", "Quotes")}{th("spread", "Broker gap")}{th("feas", "Feasibility")}
             <th className="pb-3 pl-4 text-left text-xs font-normal text-muted">Status</th><th />
           </tr>
         </thead>
@@ -112,6 +113,7 @@ export default function Plots() {
               <td className="pl-6 text-right">{ppsy(p) ? Math.round(ppsy(p)!).toLocaleString() : <span className="text-muted">-</span>}</td>
               <td className="pl-6 text-right">{p.n ?? 0}</td>
               <td className="pl-6 text-right">{p.spread != null && <Badge tone={p.spread >= spreadAlert / 100 ? "bad" : "neutral"}>{Math.round(p.spread * 100)}%</Badge>}</td>
+              <td className="pl-6 text-right">{p.feasibility ? <>{pct(p.feasibility.margin_on_cost)}<p className="text-xs text-muted">{p.feasibility.name}</p></> : <span className="text-muted">-</span>}</td>
               <td className="relative pl-4">
                 <Select label={`Status of ${label(p)}`} variant="ghost" value={p.status} onChange={(v) => changeStatus(p, v)}
                   options={STATUSES.map((v) => ({ value: v, label: v[0].toUpperCase() + v.slice(1), dot: DOT[v] }))} />
@@ -120,7 +122,7 @@ export default function Plots() {
             </tr>
           ))}
           {!shown.length && (
-            <tr><td colSpan={9} className="py-16 text-center text-muted">
+            <tr><td colSpan={10} className="py-16 text-center text-muted">
               {plots.length ? "No plots match these filters." : "No plots yet. Add your first one."}
             </td></tr>
           )}

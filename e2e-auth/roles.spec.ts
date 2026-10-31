@@ -88,7 +88,7 @@ test.describe("What each role sees on screen", () => {
   test("a non-owner opening Admin is told it is for owners; settings are visible but locked", async ({ as }) => {
     const editor = await as(PEOPLE.editor);
     await editor.page.goto("/dashboard/admin");
-    await expect(editor.page.getByText("Only an owner can open this page.")).toBeVisible();
+    await expect(editor.page.getByText("Your role cannot open this page.")).toBeVisible();
     await editor.page.goto("/dashboard/settings");
     await expect(editor.page.getByText("Only an owner can change these.")).toBeVisible();
     await expect(editor.page.getByPlaceholder("Shown under Bedrock")).toBeDisabled();
@@ -114,7 +114,7 @@ test.describe("What each role sees on screen", () => {
     for (const path of [`/dashboard/plots/${plot.id}/financials`, "/dashboard/offers", "/dashboard/offers/new", "/dashboard/offers/1", "/dashboard/settings/rates"]) {
       await page.goto(path);
       await expect(page.getByRole("heading", { name: "Not available to you" }), path).toBeVisible();
-      await expect(page.getByRole("main"), path).toContainText("owners and editors");
+      await expect(page.getByRole("main"), path).toContainText("Your role cannot open this page");
     }
     expect(asked, "a viewer's browser should not even ask for money data").toEqual([]);
   });

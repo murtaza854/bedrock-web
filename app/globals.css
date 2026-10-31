@@ -15,5 +15,12 @@ body { font-variant-numeric: tabular-nums; }
 
 /* the map's tiles are light; in dark mode only the tile canvas is inverted, so markers keep their colours */
 :root[data-theme="dark"] .map-dark .maplibregl-canvas { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9); }
+/* on a phone a table scrolls sideways inside itself instead of stretching the page */
+@media (max-width: 767px) {
+  main table { display: block; max-width: 100%; overflow-x: auto; }
+  /* a plain grid is one column that may shrink below its widest child, so a wide child cannot widen the whole page */
+  main :where(.grid) { grid-template-columns: minmax(0, 1fr); }
+  main :where(h1, h2, p, a, dd, dt) { overflow-wrap: anywhere; }
+}
 @page { size: A4; margin: 12mm; }
 @media print { body { background: #fff; color: #111; } }

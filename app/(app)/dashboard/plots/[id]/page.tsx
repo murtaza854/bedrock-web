@@ -15,7 +15,7 @@ import { OfferSummary } from "@/components/offer-summary";
 import { TaskSummary } from "@/components/task-summary";
 import { FinancialSummary } from "@/components/financial-summary";
 import { LocationSummary } from "@/components/location-summary";
-import { canSeeMoney, useMe } from "@/lib/auth";
+import { can, useMe } from "@/lib/auth";
 import { useSettings } from "@/lib/settings";
 
 const fmt = (n: number) => Math.round(n).toLocaleString();
@@ -45,7 +45,7 @@ export default function Plot({ params }: { params: Promise<{ id: string }> }) {
   const { min_sample: MIN_N, spread_alert_pct: spreadAlert } = useSettings();
   const { id } = use(params);
   const me = useMe();
-  const money = canSeeMoney(me?.role);
+  const offers = can(me, "offers"); // each part of this page belongs to a tab, and shows only if the role can read it
   const [d, setD] = useState<any>(null);
   const [all, setAll] = useState<any[]>([]);
   const [form, setForm] = useState<"quote" | "claim" | null>(null);
@@ -55,7 +55,7 @@ export default function Plot({ params }: { params: Promise<{ id: string }> }) {
   const load = () => get(`/plots/${id}`).then(setD);
   useEffect(() => { load(); get("/plots").then(setAll); }, [id]);
   // arriving from an accepted offer: /plots/1?buy=1 opens the purchase form
-  useEffect(() => { if (d && canSeeMoney(me?.role) && new URLSearchParams(location.search).get("buy") === "1" && d.plot.status !== "bought") setBuying(d.plot); }, [d?.plot?.id, me?.role]);
+  useEffect(() => { if (d && can(me, "offers", "c") && new URLSearchParams(location.search).get("buy") === "1" && d.plot.status !== "bought") setBuying(d.plot); }, [d?.plot?.id, me?.role]);
 
   const toggle = (k: "quote" | "claim") => setForm(form === k ? null : k);
   const changeStatus = async (s: string) => {
@@ -119,7 +119,7 @@ export default function Plot({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </div>
 
-      {money && <PurchaseSummary plot={p} onChange={load} />}
+      {offers && <PurchaseSummary plot={p} onChange={load} />}
 
       <Section title="Quotes" note={`${quotes.length}`} action={<Add open={form === "quote"} onClick={() => toggle("quote")}>Add quote</Add>}>
         {form === "quote" && <div className="mb-6"><QuoteForm plotId={id} onSaved={() => { setForm(null); load(); }} /></div>}
@@ -164,15 +164,15 @@ export default function Plot({ params }: { params: Promise<{ id: string }> }) {
 
       <LocationSummary plot={p} />
 
-      <ScoreSummary plotId={id} />
+      {can(me, "scorecard") && <ScoreSummary plotId={id} />}
 
-      <BuildableSummary plotId={id} />
+      {can(me, "bylaws") && <BuildableSummary plotId={id} />}
 
-      {money && <FinancialSummary plotId={id} bought={p.status === "bought"} />}
+      {can(me, "feasibility") && <FinancialSummary plotId={id} bought={p.status === "bought"} />}
 
-      <TaskSummary plotId={id} />
+      {can(me, "tasks") && <TaskSummary plotId={id} />}
 
-      {money && <OfferSummary plotId={id} />}
+      {offers && <OfferSummary plotId={id} />}
 
 
       <Section title="History">

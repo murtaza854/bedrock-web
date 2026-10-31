@@ -57,6 +57,19 @@ test.describe("Quick feasibility", () => {
     await expect(demand.getByRole("row", { name: /^Construction 11,610 7,000/ })).toContainText("81,270,000");
     await expect(demand.getByRole("row", { name: /^Monthly profit/ })).toContainText("2,051,000"); // construction time was saved too
 
+    const second = page.locator("li", { has: page.locator("summary", { hasText: "Scenario 2" }) });
+    await expect(second.locator("summary")).toContainText("primary"); // the newest scenario is the primary one
+    await demand.getByRole("button", { name: "Make primary" }).click(); // and the star can be moved
+    await expect(demand.locator("summary")).toContainText("primary");
+    await second.locator("summary").click();
+    await second.getByRole("button", { name: "Delete" }).click(); // deleting asks first, in a dialog
+    await expect(page.getByRole("dialog").getByText("Delete Scenario 2?")).toBeVisible();
+    await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+    await expect(second).toHaveCount(1);
+    await second.getByRole("button", { name: "Delete" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Delete scenario" }).click();
+    await expect(second).toHaveCount(0);
+
     await demand.getByRole("link", { name: "Edit this scenario" }).click(); // editing: the wizard opens with the saved answers
     await expect(page.getByText("Editing the scenario")).toBeVisible();
     await page.getByRole("button", { name: "Next" }).click(); // past Buildings
@@ -72,6 +85,11 @@ test.describe("Quick feasibility", () => {
     await page.goto(`/dashboard/plots/${p.id}`);
     await page.locator("summary", { hasText: "Demand" }).click();
     await expect(page.locator("li", { has: page.locator("summary", { hasText: "Demand" }) }).getByRole("row", { name: /^Profit / })).toContainText("71,530,000");
+
+    await page.goto("/dashboard/plots"); // and the plot list shows the primary scenario's profit on cost
+    await page.getByPlaceholder("Search plot, sector, street").fill(p.plot_no);
+    await expect(page.getByRole("row", { name: new RegExp(p.plot_no) })).toContainText("19.27%"); // 71,530,000 over 371,270,000
+    await expect(page.getByRole("row", { name: new RegExp(p.plot_no) })).toContainText("Demand");
   });
 
   test("no basement and no upper floors: leave them blank and the cost is land plus the ground floor only", async ({ page, plot }) => {
@@ -193,5 +211,57 @@ test.describe("Quick feasibility", () => {
     await page.getByRole("combobox", { name: "Buildings" }).click();
     await page.getByRole("option", { name: "Two buildings, each on half the plot" }).click();
     await expect(page.getByText("Needs bifurcation of the plot.")).toBeVisible();
+  });
+
+  test("floor groups and sellable shares: a report's floors go in as they are, and survive saving and editing", async ({ page, plot }) => {
+    const p = await plot({ area: "Report Town", size_sqyd: 516 });
+    await page.goto(`/dashboard/plots/${p.id}/feasibility`);
+    await page.getByRole("button", { name: "Next" }).click();
+    await page.getByLabel("Ground floor (sq ft)").fill("3086"); // banking hall: 85% sellable at 250,000
+    await page.getByLabel("Sale price per sq ft (PKR)").fill("250000");
+    await page.getByLabel("Sellable share (%)").fill("85");
+    await page.getByRole("button", { name: "Next" }).click();
+
+    const L = (base: string, g: number) => (g === 1 ? base : `${base}, group ${g}`);
+    const group = async (g: number, name: string, count: string, area: string) => {
+      await page.getByLabel(L("Group name", g), { exact: true }).fill(name);
+      await page.getByLabel(L("Number of floors above ground", g), { exact: true }).fill(count);
+      await page.getByLabel(L("Area of each floor (sq ft)", g), { exact: true }).fill(area);
+      await page.getByLabel(L("Sellable share (%)", g), { exact: true }).fill("75");
+      await page.getByLabel(g === 1 ? "Sale price per sq ft (PKR), offices" : `Sale price per sq ft (PKR), offices, group ${g}`, { exact: true }).fill("45000");
+    };
+    await group(1, "Mezzanine", "1", "3086");
+    await page.getByRole("button", { name: "Add another group of floors" }).click();
+    await group(2, "Floors 1 to 2", "2", "3811");
+    await page.getByRole("button", { name: "Add another group of floors" }).click();
+    await group(3, "Floors 3 to 11", "9", "3066");
+    await page.getByRole("button", { name: "Next" }).click();
+    await page.getByRole("button", { name: "No basement" }).click();
+    await page.getByLabel("Construction cost per sq ft (PKR), same for every floor").fill("10000");
+    await page.getByLabel("Land price in PKR").fill("1000000000");
+    await page.getByRole("button", { name: "Next" }).click();
+    await page.getByLabel("Years").fill("3");
+    await page.getByRole("button", { name: "Work it out" }).click();
+
+    // 655,775,000 ground + 104,152,500 mezzanine + 257,242,500 floors 1-2 + 931,297,500 floors 3-11
+    await expect(page.getByRole("row", { name: /^Revenue/ })).toContainText("1,948,467,500");
+    await expect(page.getByText("3,086 sq ft × 85% sellable = 2,623.1 sq ft × 250,000 = 655,775,000")).toBeVisible();
+    await expect(page.getByText("9 × 3,066 = 27,594 sq ft × 75% sellable = 20,695.5 sq ft × 45,000 = 931,297,500")).toBeVisible();
+    await expect(page.getByText("3,086 + 38,302 = 41,388 sq ft × 10,000 construction = 413,880,000")).toBeVisible(); // construction counts the whole covered area, sold or not
+    await page.getByRole("button", { name: "Save as a scenario" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/plots\/\d+$/);
+
+    const scenario = page.locator("li", { has: page.locator("summary", { hasText: "Demand" }) });
+    await scenario.locator("summary").click();
+    await expect(scenario.getByRole("row", { name: /^Revenue/ })).toContainText("1,948,467,500");
+    await scenario.getByRole("link", { name: "Edit this scenario" }).click(); // the groups come back as they were entered
+    await page.getByRole("button", { name: "Next" }).click();
+    await expect(page.getByLabel("Sellable share (%)")).toHaveValue("85");
+    await page.getByRole("button", { name: "Next" }).click();
+    await expect(page.getByLabel("Group name", { exact: true })).toHaveValue("Mezzanine");
+    await expect(page.getByLabel("Group name, group 2")).toHaveValue("Floors 1 to 2");
+    await expect(page.getByLabel("Group name, group 3")).toHaveValue("Floors 3 to 11");
+    await expect(page.getByLabel("Number of floors above ground, group 3")).toHaveValue("9");
+    await expect(page.getByLabel("Sellable share (%), group 3")).toHaveValue("75");
   });
 });

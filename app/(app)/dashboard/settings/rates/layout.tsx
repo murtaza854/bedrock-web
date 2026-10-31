@@ -1,5 +1,5 @@
-import { MoneyOnly } from "@/components/money-only";
+import { NeedAccess } from "@/components/need-access";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <MoneyOnly>{children}</MoneyOnly>;
+  return <NeedAccess area="rates">{children}</NeedAccess>;
 }

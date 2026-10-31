@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { get, patch, post, put } from "@/lib/api";
-import { useMe } from "@/lib/auth";
+import { can, useMe } from "@/lib/auth";
 import { reloadSettings } from "@/lib/settings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -88,7 +88,7 @@ export default function Settings() {
   const me = useMe();
   const [server, setServer] = useState<any>(null);
   useEffect(() => { get("/settings").then((r) => setServer(r.server)); }, []);
-  const owner = me?.role === "owner";
+  const owner = can(me, "settings", "u"); // may change the settings
   return (
     <div className="grid max-w-3xl gap-10">
       <div>

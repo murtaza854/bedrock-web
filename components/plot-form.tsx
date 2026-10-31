@@ -12,7 +12,7 @@ import { Select } from "@/components/ui/select";
 import { parseCoords } from "@/lib/geo";
 import { LocationPicker } from "@/components/location-picker";
 import { StepBar } from "@/components/step-bar";
-import { canSeeMoney, useMe } from "@/lib/auth";
+import { can, useMe } from "@/lib/auth";
 
 const Label = ({ children }: { children: React.ReactNode }) => <p className="mb-1.5 text-xs text-muted">{children}</p>;
 
@@ -63,7 +63,7 @@ export function PlotForm({ plot }: { plot?: any }) {
   return (
     <div className="max-w-xl">
       <Link href={back} className="text-sm text-muted hover:text-ink">← {plot ? "Back to plot" : "Plots"}</Link>
-      {!plot && me && <div className="mt-4"><StepBar step={0} total={canSeeMoney(me.role) ? 5 : 4} /></div>}
+      {!plot && me && <div className="mt-4"><StepBar step={0} total={3 + (can(me, "tasks", "c") ? 1 : 0) + (can(me, "offers", "c") ? 1 : 0)} /></div>}
       <h1 className="mt-2 text-2xl font-semibold tracking-tight">{plot ? "Edit plot" : "Add plot"}</h1>
       <form onSubmit={save} noValidate className="mt-8 grid gap-5">
         <div><Label>Area</Label><Combobox name="area" label="Area" placeholder="DHA Phase 8, Bahadurabad, ..." defaultValue={plot?.area} options={SEED_AREAS} first={used} error={errors.area} autoFocus /></div>

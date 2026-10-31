@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react";
 import { get, pkr, post } from "@/lib/api";
 import { label } from "@/lib/plots";
 import { today } from "@/lib/offers";
-import { canSeeMoney, useMe } from "@/lib/auth";
+import { can, useMe } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Errors, Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
@@ -58,12 +58,12 @@ export default function Setup({ params }: { params: Promise<{ id: string }> }) {
   if (!plot || !me) return null;
 
   const add = (s: string) => setSaved((all) => all.map((l, i) => (i === step ? [...l, s] : l)));
-  // offers are money, so owners and editors only
+  // each step is offered only if the role may create that kind of thing
   const steps = [
     { name: "Quotes", hint: "What brokers are asking for this plot.", body: <QuoteForm plotId={id} onSaved={(f) => add(`${f.broker}, ${pkr(f.price_pkr)}`)} /> },
     { name: "Facts", hint: "What you know about it, and where you heard it.", body: <ClaimForm plotId={id} onSaved={(f) => add(`${f.field}: ${f.value}`)} /> },
-    { name: "Tasks", hint: "Anything you need to do about this plot.", body: <Form plotId={id} offer={false} onSaved={add} /> },
-    ...(canSeeMoney(me.role) ? [{ name: "Offers", hint: "A price on the table, if a negotiation has started.", body: <Form plotId={id} offer onSaved={add} /> }] : []),
+    ...(can(me, "tasks", "c") ? [{ name: "Tasks", hint: "Anything you need to do about this plot.", body: <Form plotId={id} offer={false} onSaved={add} /> }] : []),
+    ...(can(me, "offers", "c") ? [{ name: "Offers", hint: "A price on the table, if a negotiation has started.", body: <Form plotId={id} offer onSaved={add} /> }] : []),
   ];
   const s = steps[step];
   const last = step === steps.length - 1;

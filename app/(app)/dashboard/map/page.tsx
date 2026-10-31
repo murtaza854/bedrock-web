@@ -3,7 +3,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { API, del, get, post } from "@/lib/api";
-import { canWrite, useMe } from "@/lib/auth";
+import { can, useMe } from "@/lib/auth";
 import { MapOverlays } from "@/components/map-overlays";
 import { ANCHOR_KINDS, ANCHOR_LETTER, GREY, KARACHI, STATUS_HEX, metres, scoreHex } from "@/lib/geo";
 import { cap, label, ppsy } from "@/lib/plots";
@@ -161,7 +161,7 @@ export default function MapPage() {
         )}
       </div>
 
-      <MapOverlays map={ready ? map.current : null} lib={lib.current} canEdit={canWrite(me?.role)} />
+      <MapOverlays map={ready ? map.current : null} lib={lib.current} canEdit={can(me, "map", "c")} />
 
       {unplaced.length > 0 && (
         <section className="border-t border-line pt-5">
