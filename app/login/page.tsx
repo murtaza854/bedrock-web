@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { API } from "@/lib/api";
+import { passkeysSupported, signInWithPasskey } from "@/lib/passkey";
 import Link from "next/link";
 import { AuthCard } from "@/components/auth-card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,9 @@ type Errors = { email?: string; password?: string; form?: string };
 export default function Login() {
   const [errors, setErrors] = useState<Errors>({});
   const [challenge, setChallenge] = useState<string | null>(null);
+  const [canPasskey, setCanPasskey] = useState(false);
+  useEffect(() => { setCanPasskey(passkeysSupported()); }, []);
+  const withPasskey = async () => { const m = await signInWithPasskey(); if (m) setErrors({ form: m }); else location.href = "/dashboard"; };
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.currentTarget)) as { email: string; password: string };
@@ -52,6 +56,7 @@ export default function Login() {
       <Field name="email" type="email" placeholder="Email" autoComplete="username" error={errors.email} />
       <Field name="password" type="password" placeholder="Password" autoComplete="current-password" error={errors.password} />
       <Button>Log in</Button>
+      {canPasskey && <button type="button" onClick={withPasskey} className="rounded-md border border-line px-3.5 py-2 text-center text-sm hover:bg-line/40">Sign in with a passkey</button>}
       {errors.form && <p role="alert" className="text-sm text-red-500">{errors.form}</p>}
       <Link href="/forgot" className="text-center text-sm text-muted hover:text-ink">Forgot password?</Link>
     </AuthCard>

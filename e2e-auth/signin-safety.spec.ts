@@ -89,7 +89,9 @@ test.describe("Sign-in safety", () => {
       expect(off.status()).toBe(400);
       expect(await off.text()).toContain("required for everyone");
     } finally {
-      await owner.put(`${API}/admin/settings`, { data: { require_2fa: "0" } });
+      // the owner has no two-factor either, so the API would refuse the owner too: put it back in the database and let the server's 10-second settings cache expire
+      sql(`update settings set value = '0' where key = 'require_2fa'`);
+      await page.waitForTimeout(10_500);
     }
   });
 });

@@ -3,6 +3,7 @@ import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { del, get, post } from "@/lib/api";
 import { resetMe, useMe } from "@/lib/auth";
+import { addPasskey, passkeysSupported } from "@/lib/passkey";
 import { cap } from "@/lib/plots";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -119,6 +120,37 @@ function TwoFactor({ on, reload }: { on: boolean; reload: () => void }) {
   );
 }
 
+function Passkeys() {
+  const me = useMe();
+  const [rows, setRows] = useState<any[] | null>(null);
+  const [err, setErr] = useState("");
+  const [ok, setOk] = useState(false);
+  const load = () => get("/account/passkeys").then(setRows);
+  useEffect(() => { load(); setOk(passkeysSupported()); }, []);
+  const add = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const name = String(new FormData(e.currentTarget).get("name") ?? "").trim() || "Passkey";
+    setErr("");
+    try { await addPasskey(name); (e.target as HTMLFormElement).reset?.(); resetMe(); load(); } catch (x) { setErr((x as Error).name === "NotAllowedError" ? "No passkey was added" : (x as Error).message); }
+  };
+  if (!rows) return null;
+  return (
+    <div>
+      <p className="max-w-lg text-sm text-muted">Sign in with your fingerprint, face or device PIN instead of a password and a code. Phishing sites can't use it. A passkey counts as two-factor, and adding two (say phone and laptop) means losing one doesn't lock you out.</p>
+      <ul className="mt-4 text-sm">{rows.map((k) => (
+        <li key={k.id} className="flex items-center justify-between gap-4 border-t border-line py-3 first:border-t-0 first:pt-0">
+          <span><b className="font-medium">{k.name}</b><span className="block text-xs text-muted">added {ago(k.created_at)} · {k.last_used_at ? `used ${ago(k.last_used_at)}` : "not used yet"}</span></span>
+          <button onClick={async () => { await del(`/account/passkeys/${k.id}`); resetMe(); load(); }} className="text-xs text-muted hover:text-ink">Remove</button>
+        </li>))}</ul>
+      {ok ? (
+        <form onSubmit={add} noValidate className="mt-4 flex max-w-md items-start gap-3"><Field name="name" placeholder="Name, e.g. MacBook" /><Button>Add a passkey</Button></form>
+      ) : <p className="mt-4 text-sm text-muted">This browser can't make passkeys. Use a recent Chrome, Safari or Firefox.</p>}
+      {err && <p role="alert" className="mt-3 text-sm text-red-500">{err}</p>}
+      {me?.must_setup_2fa && <p className="mt-3 text-xs text-muted">A passkey is enough to finish getting started; you don't also need the authenticator app.</p>}
+    </div>
+  );
+}
+
 function Sessions() {
   const [rows, setRows] = useState<any[] | null>(null);
   const load = () => get("/account/sessions").then(setRows);
@@ -149,13 +181,14 @@ export default function Account() {
         <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
         <p className="mt-1 text-sm text-muted">{m.email} · <Badge>{cap(m.role)}</Badge></p>
       </div>
-      {m.must_setup_2fa && <p role="status" className="rounded-xl bg-line/40 px-5 py-4 text-sm"><b className="font-medium">{m.onboarding ? "Step 2 of 3: " : ""}Turn on two-factor sign-in to continue.</b> {m.onboarding ? "Scan the code below with an authenticator app, then enter the 6-digit code it shows. Step 3 is saving your backup codes." : "Bedrock requires it for everyone. Set it up below with an authenticator app, and keep the backup codes somewhere safe."}</p>}
+      {m.must_setup_2fa && <p role="status" className="rounded-xl bg-line/40 px-5 py-4 text-sm"><b className="font-medium">{m.onboarding ? "Step 2 of 3: " : ""}Turn on two-factor sign-in to continue.</b> {m.onboarding ? "Add a passkey, or scan the code below with an authenticator app and enter the 6-digit code it shows. With the app, step 3 is saving your backup codes." : "Bedrock requires it for everyone. Set it up below with an authenticator app, and keep the backup codes somewhere safe."}</p>}
       {m.dev ? (
         <p className="rounded-xl bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">Login is switched off while you build (<code>DEV_NO_AUTH</code>), so there is no password, two-factor or session to manage. Everyone is treated as an owner. Run the API with <code>make run DEV_NO_AUTH=0</code> to use real accounts.</p>
       ) : (
         <>
           <Section title="Password"><Password /></Section>
           <Section title="Two-factor sign-in"><TwoFactor on={m.totp_enabled} reload={() => setTick((t) => t + 1)} /></Section>
+          <Section title="Passkeys"><Passkeys /></Section>
           <Section title="Where you're signed in"><Sessions /></Section>
         </>
       )}
