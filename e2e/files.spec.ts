@@ -106,4 +106,22 @@ test.describe("Plot files", () => {
     await page.getByRole("button", { name: "+ Add file" }).click();
     await expect(page.getByLabel("Keep the original")).toBeVisible();
   });
+
+  test("several files are uploaded together; one that is refused is named and the others are kept", async ({ page, plot, request }) => {
+    const p = await plot({ area: "Files Town" });
+    await page.goto(`/dashboard/plots/${p.id}`);
+    await page.getByRole("button", { name: "+ Add file" }).click();
+    await page.locator('input[type="file"]').setInputFiles([
+      { name: "page-1.png", mimeType: "image/png", buffer: MAP_PNG },
+      { name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("not an image") },
+      { name: "page-2.png", mimeType: "image/png", buffer: MAP_PNG },
+    ]);
+    await page.getByRole("button", { name: "Upload" }).click();
+    await expect(page.locator("ul[role=alert]")).toContainText("notes.txt"); // the refused one is named
+    await expect(page.locator("li", { hasText: "page-1" })).toBeVisible();
+    await expect(page.locator("li", { hasText: "page-2" })).toBeVisible(); // the others went through
+    await expect(page.getByLabel("File label")).toBeVisible(); // and the form stays open to try again
+    const list = await (await request.get(`${API}/plots/${p.id}/files`)).json();
+    expect(list.map((f: any) => f.label).sort()).toEqual(["page-1", "page-2"]);
+  });
 });

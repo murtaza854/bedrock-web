@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/select";
 import { StepBar } from "@/components/step-bar";
 import { ClaimForm, QuoteForm } from "@/components/quote-claim-forms";
 import { FileUpload, savedNote } from "@/components/files";
+import { del } from "@/lib/api";
 
 // The steps after "Add plot". Every step can be skipped; whatever is saved shows under the form so you can add several.
 function Form({ plotId, onSaved, offer }: { plotId: string; onSaved: (s: string) => void; offer: boolean }) {
@@ -54,15 +55,15 @@ export default function Setup({ params }: { params: Promise<{ id: string }> }) {
   const me = useMe();
   const [plot, setPlot] = useState<any>(null);
   const [step, setStep] = useState(0);
-  const [saved, setSaved] = useState<string[][]>([[], [], [], [], []]);
+  const [saved, setSaved] = useState<{ text: string; remove?: () => Promise<unknown> }[][]>([[], [], [], [], []]);
   useEffect(() => { get(`/plots/${id}`).then((d) => setPlot(d.plot)); }, [id]);
   if (!plot || !me) return null;
 
-  const add = (s: string) => setSaved((all) => all.map((l, i) => (i === step ? [...l, s] : l)));
+  const add = (text: string, remove?: () => Promise<unknown>) => setSaved((all) => all.map((l, i) => (i === step ? [...l, { text, remove }] : l)));
   // each step is offered only if the role may create that kind of thing
   const steps = [
     { name: "Quotes", hint: "What brokers are asking for this plot.", body: <QuoteForm plotId={id} onSaved={(f) => add(`${f.broker}, ${pkr(f.price_pkr)}`)} /> },
-    { name: "Files", hint: "The lease, a report page or a photo. You can link a fact to a file in the next step.", body: <FileUpload plotId={id} onUploaded={(f) => add(savedNote(f))} /> },
+    { name: "Files", hint: "The lease, a report page or a photo. You can link a fact to a file in the next step.", body: <FileUpload plotId={id} onUploaded={(f) => add(savedNote(f), () => del(`/files/${f.id}`))} /> },
     { name: "Facts", hint: "What you know about it, and where you heard it.", body: <ClaimForm plotId={id} onSaved={(f) => add(`${f.field}: ${f.value}`)} /> },
     ...(can(me, "tasks", "c") ? [{ name: "Tasks", hint: "Anything you need to do about this plot.", body: <Form plotId={id} offer={false} onSaved={add} /> }] : []),
     ...(can(me, "offers", "c") ? [{ name: "Offers", hint: "A price on the table, if a negotiation has started.", body: <Form plotId={id} offer onSaved={add} /> }] : []),
@@ -80,7 +81,9 @@ export default function Setup({ params }: { params: Promise<{ id: string }> }) {
       <h1 className="mt-3 text-2xl font-semibold tracking-tight">{s.name}</h1>
       <p className="mt-1 text-sm text-muted">{s.hint} You can skip this and add it later from the plot page.</p>
       <div className="mt-6">{s.body}</div>
-      {saved[step].length > 0 && <ul className="mt-5 text-sm">{saved[step].map((x, i) => <li key={i} className="border-t border-line py-2">Saved: {x}</li>)}</ul>}
+      {saved[step].length > 0 && <ul className="mt-5 text-sm">{saved[step].map((x, i) => (
+        <li key={i} className="flex items-center justify-between gap-4 border-t border-line py-2"><span>Saved: {x.text}</span>
+          {x.remove && <button type="button" onClick={async () => { await x.remove!(); setSaved((all) => all.map((l, q) => (q === step ? l.filter((_, k) => k !== i) : l))); }} className="text-xs text-muted underline hover:text-ink">Remove</button>}</li>))}</ul>}
       <div className="mt-8 flex items-center gap-2">
         {step > 0 && <button onClick={() => setStep(step - 1)} className="rounded-lg bg-line/50 px-4 py-2.5 text-sm font-medium hover:bg-line">Back</button>}
         {last ? <Link href={`/dashboard/plots/${id}`} className="rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-bg hover:opacity-90">Finish</Link>

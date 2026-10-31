@@ -112,10 +112,13 @@ test.describe("Add plot: setup steps", () => {
     await expect(page.getByText("Saved: Ali")).toBeVisible();
     await page.getByRole("button", { name: "Next" }).click();
     await expect(page.getByRole("heading", { name: "Files" })).toBeVisible();
-    await page.locator('input[type="file"]').setInputFiles({ name: "lease.png", mimeType: "image/png", buffer: MAP_PNG });
-    await page.getByLabel("File label").fill("Lease deed");
+    await page.locator('input[type="file"]').setInputFiles([{ name: "lease.png", mimeType: "image/png", buffer: MAP_PNG }, { name: "extra.png", mimeType: "image/png", buffer: MAP_PNG }]); // several at once
     await page.getByRole("button", { name: "Upload" }).click();
-    await expect(page.getByText("Saved: Lease deed")).toBeVisible();
+    await expect(page.getByText("Saved: lease")).toBeVisible();
+    await expect(page.getByText("Saved: extra")).toBeVisible();
+    await page.locator("li", { hasText: "Saved: extra" }).getByRole("button", { name: "Remove" }).click(); // a wrong one can be taken back out
+    await expect(page.getByText("Saved: extra")).toHaveCount(0);
+    await expect(page.getByText("Saved: lease")).toBeVisible();
     await page.getByRole("button", { name: "Next" }).click();
     await expect(page.getByRole("heading", { name: "Facts" })).toBeVisible();
     await page.getByRole("button", { name: "Skip" }).click(); // nothing added here

@@ -12,29 +12,41 @@ const size = (n: number) => (n < 1 << 20 ? `${Math.max(1, Math.round(n / 1024))}
 
 // what to say about a saved file in a list of what was added
 export const savedNote = (f: PlotFile) => f.label + (f.original_size > 0 ? ` (shrunk from ${size(f.original_size)} to ${size(f.size)})` : "");
-// Choose a file, name it, upload. onUploaded gets the saved file.
-export function FileUpload({ plotId, onUploaded }: { plotId: string | number; onUploaded: (f: PlotFile) => void }) {
+// Choose one or several files, upload them one after another. A label is used when a single file is chosen; otherwise each
+// file is named after itself. onUploaded gets each saved file; onDone says how many failed (the rest are saved).
+export function FileUpload({ plotId, onUploaded, onDone }: { plotId: string | number; onUploaded?: (f: PlotFile) => void; onDone?: (failed: number) => void }) {
   const ref = useRef<HTMLFormElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState("");
+  const [errs, setErrs] = useState<string[]>([]);
   const send = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    if (!(form.get("file") as File)?.size) return setErr("Choose an image or a PDF first");
-    setBusy(true); setErr("");
-    try { const f = await upload(`/plots/${plotId}/files`, form); ref.current?.reset(); onUploaded(f); }
-    catch (x) { setErr((x as Error).message || "Could not upload, try again"); }
-    setBusy(false);
+    const files = (form.getAll("file") as File[]).filter((f) => f.size > 0);
+    if (!files.length) return setErrs(["Choose an image or a PDF first"]);
+    const label = String(form.get("label") ?? "").trim(), keep = form.get("keep_original");
+    const bad: string[] = [];
+    for (const [i, file] of files.entries()) {
+      setBusy(files.length > 1 ? `Uploading ${i + 1} of ${files.length}...` : "Uploading...");
+      const one = new FormData();
+      one.append("file", file);
+      if (files.length === 1 && label) one.append("label", label);
+      if (keep) one.append("keep_original", "1");
+      try { const saved = await upload(`/plots/${plotId}/files`, one); onUploaded?.(saved); }
+      catch (x) { bad.push(`${file.name}: ${(x as Error).message || "could not upload"}`); }
+    }
+    setBusy(""); setErrs(bad);
+    if (bad.length < files.length) ref.current?.reset();
+    onDone?.(bad.length);
   };
   return (
     <form ref={ref} onSubmit={send} noValidate className="grid items-start gap-3 md:grid-cols-4">
-      <div className="md:col-span-2"><p className="mb-1.5 text-xs text-muted">Image or PDF, up to 15 MB</p>
-        <input name="file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" aria-label="File"
+      <div className="md:col-span-2"><p className="mb-1.5 text-xs text-muted">Images or PDFs, up to 15 MB each. Choose several at once if you like.</p>
+        <input name="file" type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" aria-label="File"
           className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-line/50 file:px-3.5 file:py-2.5 file:text-sm file:font-medium hover:file:bg-line" /></div>
-      <div><p className="mb-1.5 text-xs text-muted">Label (optional)</p><Input name="label" placeholder="e.g. Lease deed" aria-label="File label" maxLength={120} /></div>
-      <div className="flex items-end"><Button disabled={busy}>{busy ? "Uploading..." : "Upload"}</Button></div>
+      <div><p className="mb-1.5 text-xs text-muted">Label (for a single file)</p><Input name="label" placeholder="e.g. Lease deed" aria-label="File label" maxLength={120} /></div>
+      <div className="flex items-end"><Button disabled={!!busy}>{busy || "Upload"}</Button></div>
       <label className="flex items-center gap-2 text-xs text-muted md:col-span-4"><input type="checkbox" name="keep_original" value="1" className="size-4 accent-[var(--accent)]" />Keep the original. Big JPEG and PNG scans are shrunk to save space, and a scan stays readable.</label>
-      {err && <p role="alert" className="text-sm text-red-500 md:col-span-4">{err}</p>}
+      {errs.length > 0 && <ul role="alert" className="grid gap-1 text-sm text-red-500 md:col-span-4">{errs.map((m) => <li key={m}>{m}</li>)}</ul>}
     </form>
   );
 }
@@ -49,7 +61,7 @@ export function FilesSection({ plotId, files, canAdd, canDelete, onChange }: { p
         <h2 className="text-xs font-medium uppercase tracking-wider text-muted">Files<span className="ml-3 normal-case tracking-normal">{files.length}</span></h2>
         {canAdd && <button onClick={() => setAdding(!adding)} className="text-sm text-muted hover:text-ink">{adding ? "Cancel" : "+ Add file"}</button>}
       </div>
-      {adding && <div className="mt-4"><FileUpload plotId={plotId} onUploaded={() => { setAdding(false); onChange(); }} /></div>}
+      {adding && <div className="mt-4"><FileUpload plotId={plotId} onDone={(failed) => { onChange(); if (!failed) setAdding(false); }} /></div>}
       {files.length ? (
         <ul className="mt-4 grid gap-3 text-sm">{files.map((f) => (
           <li key={f.id} className="flex items-center gap-4 border-t border-line pt-3 first:border-t-0 first:pt-0">
