@@ -15,8 +15,11 @@ go build -o "$BIN" .
 export DATABASE_URL="${ADMIN%/*}/$DB" DEV_NO_AUTH=0 BACKUPS=0 PORT=8102 WEB_ORIGIN=http://localhost:3102 \
   DOCS_DIR="$TMP/bedrock-e2e-auth-docs" BACKUP_DIR="$TMP/bedrock-e2e-auth-backups" MAIL_OUTBOX="$TMP/bedrock-e2e-auth-mail" \
   DOCS_KEY=00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff
-add() { printf '%s\n' "$2" | "$BIN" adduser "$1" "$3" 2>/dev/null; }
-add owner@e2e.test 'Owner-pass-12345' owner
-add editor@e2e.test 'Editor-pass-12345' editor
-add viewer@e2e.test 'Viewer-pass-12345' viewer
+# make adduser only creates the very first owner, so the three test people are inserted directly (bcrypt hashes of the passwords in fixtures.ts)
+psql "${ADMIN%/*}/$DB" -q -v ON_ERROR_STOP=1 <<'SQL'
+insert into users(email, password_hash, role) values
+  ('owner@e2e.test',  '$2a$10$XvNwidDwG/RD.QgQhWP76.NtWjRpyXGH6U0xNSIFvL0ZAZ9xqTzt2', 'owner'),
+  ('editor@e2e.test', '$2a$10$GGYMAwDZ8RtdFfvHSS3CX.fpRqP0NPQiFu4vnxvVenAARnk5NPRKK', 'editor'),
+  ('viewer@e2e.test', '$2a$10$StwTHPtCiJ.aRCOstfwWROIn3QnUEWeii.blzi6kPsvx42ON54We2', 'viewer');
+SQL
 exec "$BIN"
