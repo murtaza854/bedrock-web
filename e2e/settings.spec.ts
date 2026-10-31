@@ -8,7 +8,7 @@ test.describe("Settings", () => {
   test("shows the numbers behind the alerts with their defaults", async ({ page }) => {
     await page.goto("/dashboard/settings");
     await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-    const spread = item(page, "Broker disagreement alert");
+    const spread = item(page, "Broker gap alert");
     await expect(spread).toContainText("Default 10");
     await expect(spread.locator("input")).toHaveValue("10");
     await expect(page.getByRole("button", { name: "Save changes" })).toBeDisabled(); // nothing changed yet
@@ -18,10 +18,10 @@ test.describe("Settings", () => {
 
   test("a number outside its range is refused with the allowed range", async ({ page }) => {
     await page.goto("/dashboard/settings");
-    await item(page, "Broker disagreement alert").locator("input").fill("0");
+    await item(page, "Broker gap alert").locator("input").fill("0");
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("A whole number from 1 to 100")).toBeVisible();
-    await item(page, "Broker disagreement alert").locator("input").fill("12.5");
+    await item(page, "Broker gap alert").locator("input").fill("12.5");
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("A whole number from 1 to 100")).toBeVisible();
   });

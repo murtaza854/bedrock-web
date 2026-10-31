@@ -72,15 +72,15 @@ test.describe("What each role sees on screen", () => {
     await expect(heading(editor, /^Offers/)).toBeVisible();
   });
 
-  test("a viewer who tries to save something is told it could not be saved, and nothing is stored", async ({ as, owner }) => {
+  test("a viewer is not offered buttons to add or change anything, and the server refuses the same request if it is sent anyway", async ({ as, owner }) => {
     const plot = await (await owner.post(`${API}/plots`, { data: plotBody("V-TRY") })).json();
-    const { page } = await as(PEOPLE.viewer);
+    const { page, request } = await as(PEOPLE.viewer);
     await page.goto(`/dashboard/plots/${plot.id}`);
-    await page.getByRole("button", { name: "+ Add quote" }).click();
-    await page.getByPlaceholder("Broker").fill("Sneaky");
-    await page.getByPlaceholder("Price (PKR)").fill("5000");
-    await page.getByRole("button", { name: "Save quote" }).click();
-    await expect(page.getByText("Could not save, try again")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /V-TRY/ })).toBeVisible();
+    for (const name of ["+ Add quote", "+ Add claim", "+ Add file", "+ Add task"]) await expect(page.getByRole("button", { name }), name).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /^Edit$/ })).toHaveCount(0);
+    const sneaky = await request.post(`${API}/plots/${plot.id}/quotes`, { data: { broker: "Sneaky", quote_type: "asking", price_pkr: 5000, inclusions: "" } });
+    expect(sneaky.status()).toBe(403);
     const saved = await (await owner.get(`${API}/plots/${plot.id}`)).json();
     expect(saved.quotes).toHaveLength(0);
   });

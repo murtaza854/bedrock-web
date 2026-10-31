@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Errors, Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Can } from "@/components/can";
 
 const Lbl = ({ children }: { children: React.ReactNode }) => <p className="mb-1.5 text-xs text-muted">{children}</p>;
 const Fact = ({ k, v, sub }: { k: string; v: React.ReactNode; sub?: React.ReactNode }) => (
@@ -109,7 +110,7 @@ export default function Negotiation({ params }: { params: Promise<{ id: string }
         <div className="rounded-xl bg-line/40 px-5 py-4 text-sm">
           <b className="font-medium">{cap(n.status)}{n.status === "accepted" && ` at ${money(n.agreed_pkr)}`}</b> on {dayStr(n.closed_on)}.{n.close_note && <span className="text-muted"> {n.close_note}</span>}
           {n.status === "accepted" && <Link href={`/dashboard/plots/${n.plot_id}?buy=1`} className="ml-4 underline hover:text-muted">Record the purchase</Link>}
-          <button onClick={reopen} className="ml-4 text-muted underline hover:text-ink">Reopen</button>
+          <Can area="offers" letter="u"><button onClick={reopen} className="ml-4 text-muted underline hover:text-ink">Reopen</button></Can>
           {errors.form && <p role="alert" className="mt-2 text-red-500">{errors.form}</p>}
         </div>
       )}
@@ -119,8 +120,8 @@ export default function Negotiation({ params }: { params: Promise<{ id: string }
       <section className="border-t border-line pt-5">
         <div className="flex items-baseline justify-between">
           <h2 className="text-xs font-medium uppercase tracking-wider text-muted">Rounds<span className="ml-3 normal-case tracking-normal">{p.live.length}</span></h2>
-          {open && <span className="flex gap-5 text-sm"><button onClick={() => { setErrors({}); setForm(form === "round" ? null : "round"); }} className="text-muted hover:text-ink">{form === "round" ? "Cancel" : "+ Add a round"}</button>
-            <button onClick={() => { setErrors({}); setOutcome("accepted"); setForm(form === "close" ? null : "close"); }} className="text-muted hover:text-ink">{form === "close" ? "Cancel" : "Close negotiation"}</button></span>}
+          {open && <span className="flex gap-5 text-sm"><Can area="offers"><button onClick={() => { setErrors({}); setForm(form === "round" ? null : "round"); }} className="text-muted hover:text-ink">{form === "round" ? "Cancel" : "+ Add a round"}</button></Can>
+            <Can area="offers" letter="u"><button onClick={() => { setErrors({}); setOutcome("accepted"); setForm(form === "close" ? null : "close"); }} className="text-muted hover:text-ink">{form === "close" ? "Cancel" : "Close negotiation"}</button></Can></span>}
         </div>
         {form === "round" && (
           <form key={last?.id} onSubmit={addRound} noValidate className="mt-4 grid items-start gap-4 md:grid-cols-4">
@@ -155,7 +156,7 @@ export default function Negotiation({ params }: { params: Promise<{ id: string }
                 <td className="pl-4 text-right text-xs">
                   {!r.voided_at && open && (voiding === r.id ? (
                     <form onSubmit={voidRound} noValidate className="flex items-center justify-end gap-2"><div><Input name="reason" placeholder="Reason" aria-invalid={!!voidErr} className="!py-1 text-xs" autoFocus />{voidErr && <p role="alert" className="mt-1 text-red-500">{voidErr}</p>}</div><button className="text-red-500">Void</button><button type="button" onClick={() => setVoiding(null)} className="text-muted">Keep</button></form>
-                  ) : <button onClick={() => { setVoidErr(""); setVoiding(r.id); }} className="text-muted hover:text-ink">Void</button>)}
+                  ) : <Can area="offers" letter="u"><button onClick={() => { setVoidErr(""); setVoiding(r.id); }} className="text-muted hover:text-ink">Void</button></Can>)}
                 </td>
               </tr>);
           })}</tbody>

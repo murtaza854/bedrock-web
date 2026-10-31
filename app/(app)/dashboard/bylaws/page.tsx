@@ -6,6 +6,7 @@ import { USES, band, dayOf, n, setbacks, status } from "@/lib/bylaws";
 import { cap } from "@/lib/plots";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Can } from "@/components/can";
 
 const Kpi = ({ k, v, sub }: { k: string; v: number; sub?: string }) => (
   <div><p className="text-xs text-muted">{k}</p><p className="mt-1.5 text-3xl font-light tracking-tight">{v}</p><p className="mt-1 min-h-4 text-xs text-muted">{sub}</p></div>
@@ -39,7 +40,7 @@ export default function Bylaws() {
           <h1 className="text-2xl font-semibold tracking-tight">Bylaws</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted">The building limits that decide how much you can build on a plot. Nothing is pre-filled: enter each rule from the authority's circular, with its source, and confirm it with the authority before relying on it.</p>
         </div>
-        <Link href="/dashboard/bylaws/new" className="rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-bg hover:opacity-90">Add a rule</Link>
+        <Can area="bylaws"><Link href="/dashboard/bylaws/new" className="rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-bg hover:opacity-90">Add a rule</Link></Can>
       </div>
 
       <div className="grid grid-cols-2 gap-x-8 gap-y-8 md:grid-cols-4">
@@ -57,7 +58,7 @@ export default function Bylaws() {
               <li key={p.plot_id} className="flex items-center justify-between gap-4 border-t border-line py-2.5 first:border-t-0 first:pt-0">
                 <Link href={`/dashboard/plots/${p.plot_id}`} className="font-medium">{p.plot_label}</Link>
                 <span className="flex items-center gap-4 text-muted">{p.size_sqyd ? `${p.size_sqyd} sq yd` : "no size"} · {p.use}
-                  <Link href={`/dashboard/bylaws/new?area=${encodeURIComponent(p.area)}&use=${p.use}`} className="text-xs hover:text-ink">Add a rule →</Link></span>
+                  <Can area="bylaws"><Link href={`/dashboard/bylaws/new?area=${encodeURIComponent(p.area)}&use=${p.use}`} className="text-xs hover:text-ink">Add a rule →</Link></Can></span>
               </li>
             ))}
           </ul>
@@ -84,7 +85,7 @@ export default function Bylaws() {
                 <td className="pl-4 text-right text-xs">
                   {st !== "void" && (voiding === r.id ? (
                     <form onSubmit={voidRule} noValidate className="flex items-center justify-end gap-2"><div><Input name="reason" placeholder="Reason" aria-invalid={!!voidErr} className="!py-1 text-xs" autoFocus />{voidErr && <p role="alert" className="mt-1 text-red-500">{voidErr}</p>}</div><button className="text-red-500">Void</button><button type="button" onClick={() => setVoiding(null)} className="text-muted">Keep</button></form>
-                  ) : <span className="flex justify-end gap-3 text-muted">{!r.verified && <button onClick={() => verify(r.id)} className="hover:text-ink">Mark confirmed</button>}<button onClick={() => { setVoidErr(""); setVoiding(r.id); }} className="hover:text-ink">Void</button></span>)}
+                  ) : <span className="flex justify-end gap-3 text-muted"><Can area="bylaws" letter="u">{!r.verified && <button onClick={() => verify(r.id)} className="hover:text-ink">Mark confirmed</button>}<button onClick={() => { setVoidErr(""); setVoiding(r.id); }} className="hover:text-ink">Void</button></Can></span>)}
                 </td>
               </tr>))}</tbody>
           </table>

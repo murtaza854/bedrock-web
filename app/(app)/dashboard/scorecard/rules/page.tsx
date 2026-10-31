@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { get, patch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { can, useMe } from "@/lib/auth";
 
 const SECTIONS = ["technical", "financial", "location"];
 const n = (v: any) => (v === null || v === undefined || v === "" ? null : Number(v));
@@ -11,13 +12,14 @@ const n = (v: any) => (v === null || v === undefined || v === "" ? null : Number
 function Row({ f, onSaved }: { f: any; onSaved: () => void }) {
   const [v, setV] = useState({ weight: f.weight, lo_zero: f.lo_zero, lo_ideal: f.lo_ideal, hi_ideal: f.hi_ideal, hi_zero: f.hi_zero });
   const [err, setErr] = useState("");
+  const edit = can(useMe(), "scorecard", "u"); // read-only for a role that cannot update the rules
   const dirty = JSON.stringify(v) !== JSON.stringify({ weight: f.weight, lo_zero: f.lo_zero, lo_ideal: f.lo_ideal, hi_ideal: f.hi_ideal, hi_zero: f.hi_zero });
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) => { setErr(""); setV({ ...v, [k]: e.target.value === "" ? null : e.target.value }); };
   const save = async () => {
     try { await patch(`/score/fields/${f.id}`, { weight: n(v.weight) ?? 0, lo_zero: n(v.lo_zero), lo_ideal: n(v.lo_ideal), hi_ideal: n(v.hi_ideal), hi_zero: n(v.hi_zero) }); onSaved(); }
     catch (x) { setErr((x as Error).message || "Could not save"); }
   };
-  const cell = (k: keyof typeof v) => <Input type="number" step="any" value={v[k] ?? ""} onChange={set(k)} aria-label={`${f.label} ${k}`} className="!w-20 !px-2.5 !py-1.5 text-right" />;
+  const cell = (k: keyof typeof v) => <Input type="number" step="any" value={v[k] ?? ""} onChange={set(k)} aria-label={`${f.label} ${k}`} disabled={!edit} className="!w-20 !px-2.5 !py-1.5 text-right" />;
   return (
     <tr className="border-t border-line align-top">
       <td className="py-3 pr-4"><span className="font-medium">{f.label}</span>{err && <p role="alert" className="mt-1 text-xs text-red-500">{err}</p>}</td>

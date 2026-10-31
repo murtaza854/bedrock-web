@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Errors } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Can } from "@/components/can";
+import { can, useMe } from "@/lib/auth";
 
 const when = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 const Bar = ({ p }: { p: number }) => <div className="h-1 w-20 rounded-full bg-line"><div className="h-1 rounded-full bg-ink/70" style={{ width: `${Math.max(0, Math.min(100, p))}%` }} /></div>;
@@ -21,6 +23,7 @@ const Section = ({ title, note, children }: { title: string; note?: string; chil
 
 export default function Scorecard({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const me = useMe();
   const [d, setD] = useState<any>(null);
   const [plot, setPlot] = useState<any>(null);
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -46,7 +49,7 @@ export default function Scorecard({ params }: { params: Promise<{ id: string }> 
         <Link href={`/dashboard/plots/${id}`} className="text-sm text-muted hover:text-ink">← {plot ? label(plot) : "Plot"}</Link>
         <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
           <h1 className="text-2xl font-semibold tracking-tight">Scorecard</h1>
-          <Select label="Profile" variant="ghost" value={String(pr.id)} options={profiles.map((p) => ({ value: String(p.id), label: `${p.name} profile` }))}
+          <Select label="Profile" variant="ghost" disabled={!can(me, "scorecard", "u")} value={String(pr.id)} options={profiles.map((p) => ({ value: String(p.id), label: `${p.name} profile` }))}
             onChange={async (v) => { await put(`/plots/${id}/profile`, { profile_id: Number(v) }); load(); }} />
         </div>
         <div className="mt-6 flex flex-wrap items-end gap-x-12 gap-y-6">
@@ -94,7 +97,7 @@ export default function Scorecard({ params }: { params: Promise<{ id: string }> 
       <Section title="Decisions" note={`${snapshots.length} saved`}>
         <div className="mb-5 flex items-center justify-between">
           <p className="max-w-xl text-xs text-muted">Saving a decision freezes this score, its inputs and your reasons, so you can look back later and see whether your scoring held up.</p>
-          <button onClick={() => { setErrors({}); setOpen(!open); }} className="shrink-0 text-sm text-muted hover:text-ink">{open ? "Cancel" : "+ Save a decision"}</button>
+          <Can area="scorecard"><button onClick={() => { setErrors({}); setOpen(!open); }} className="shrink-0 text-sm text-muted hover:text-ink">{open ? "Cancel" : "+ Save a decision"}</button></Can>
         </div>
         {open && (
           <form onSubmit={save} noValidate className="mb-6 grid items-start gap-4 md:grid-cols-[12rem_1fr]">

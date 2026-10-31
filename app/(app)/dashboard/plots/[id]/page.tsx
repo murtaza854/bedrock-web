@@ -7,6 +7,7 @@ import { Badge, levelTone } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { ClaimForm, LEVELS, QuoteForm } from "@/components/quote-claim-forms";
 import { FilesSection, PlotFile, fileUrl } from "@/components/files";
+import { Can } from "@/components/can";
 import { RejectDialog } from "@/components/reject-dialog";
 import { PurchaseDialog } from "@/components/purchase-dialog";
 import { PurchaseSummary } from "@/components/purchase-summary";
@@ -100,11 +101,11 @@ export default function Plot({ params }: { params: Promise<{ id: string }> }) {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Select label="Status" variant="ghost" value={p.status} onChange={changeStatus}
+            <Select label="Status" variant="ghost" value={p.status} disabled={!can(me, "plots", "u")} onChange={changeStatus}
               options={STATUSES.map((v) => ({ value: v, label: cap(v), dot: DOT[v] }))} />
             {statusErr && <span role="alert" className="max-w-xs text-xs text-red-500">{statusErr}</span>}
             <Link href={`/dashboard/plots/${id}/report`} className="rounded-lg bg-line/50 px-3.5 py-2 text-sm font-medium hover:bg-line">Report</Link>
-            <Link href={`/dashboard/plots/${id}/edit`} className="rounded-lg bg-line/50 px-3.5 py-2 text-sm font-medium hover:bg-line">Edit</Link>
+            <Can area="plots" letter="u"><Link href={`/dashboard/plots/${id}/edit`} className="rounded-lg bg-line/50 px-3.5 py-2 text-sm font-medium hover:bg-line">Edit</Link></Can>
           </div>
         </div>
       </div>
@@ -124,7 +125,7 @@ export default function Plot({ params }: { params: Promise<{ id: string }> }) {
 
       {offers && <PurchaseSummary plot={p} onChange={load} />}
 
-      <Section title="Quotes" note={`${quotes.length}`} action={<Add open={form === "quote"} onClick={() => toggle("quote")}>Add quote</Add>}>
+      <Section title="Quotes" note={`${quotes.length}`} action={<Can area="plots"><Add open={form === "quote"} onClick={() => toggle("quote")}>Add quote</Add></Can>}>
         {form === "quote" && <div className="mb-6"><QuoteForm plotId={id} onSaved={() => { setForm(null); load(); }} /></div>}
         {quotes.length ? (
           <table className="w-full text-sm">
@@ -142,7 +143,7 @@ export default function Plot({ params }: { params: Promise<{ id: string }> }) {
         ) : <p className="text-sm text-muted">No quotes yet. Add the first broker quote.</p>}
       </Section>
 
-      <Section title="Facts" note="best-supported claim per field" action={<Add open={form === "claim"} onClick={() => toggle("claim")}>Add claim</Add>}>
+      <Section title="Facts" note="best-supported claim per field" action={<Can area="plots"><Add open={form === "claim"} onClick={() => toggle("claim")}>Add claim</Add></Can>}>
         {form === "claim" && <div className="mb-6"><ClaimForm plotId={id} onSaved={() => { setForm(null); load(); }} /></div>}
         {groups.length ? (
           <ul className="text-sm">

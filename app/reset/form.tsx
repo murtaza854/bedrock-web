@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
+import { post } from "@/lib/api";
 import { AuthCard } from "@/components/auth-card";
 import { Button } from "@/components/ui/button";
 import { Errors, Field } from "@/components/ui/field";
@@ -19,9 +20,7 @@ export function ResetForm({ token }: { token: string }) {
     else if (pw && again !== pw) err.again = "Passwords don't match";
     setErrors(err);
     if (Object.keys(err).length) return;
-    // ponytail: UI only. Wire to POST /reset {token, password} once the API supports it.
-    void token;
-    await new Promise((r) => setTimeout(r, 500));
+    try { await post("/reset", { token, password: pw }); } catch (x) { return setErrors({ password: (x as Error).message || "Could not set the password, try again" }); }
     setDone(true);
   };
   if (done)

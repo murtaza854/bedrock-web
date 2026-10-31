@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { get } from "@/lib/api";
 import { band, dayOf } from "@/lib/bylaws";
+import { Can } from "@/components/can";
 
 // What the bylaws allow on this plot, with the working shown so it can be checked by hand.
 export function BuildableSummary({ plotId }: { plotId: string }) {
@@ -28,7 +29,7 @@ export function BuildableSummary({ plotId }: { plotId: string }) {
       ) : (
         <p className="mt-4 text-sm text-muted">
           {d.warnings.length ? d.warnings[0] : res ? res.warnings[0] : `No bylaw rule matches ${d.area} for ${d.use} use.`}{" "}
-          {!d.warnings.length && <Link href={`/dashboard/bylaws/new?area=${encodeURIComponent(d.area)}&use=${d.use}`} className="underline hover:text-ink">Add the rule</Link>}
+          {!d.warnings.length && <Can area="bylaws"><Link href={`/dashboard/bylaws/new?area=${encodeURIComponent(d.area)}&use=${d.use}`} className="underline hover:text-ink">Add the rule</Link></Can>}
         </p>
       )}
     </section>

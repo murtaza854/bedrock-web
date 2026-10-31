@@ -68,6 +68,46 @@ test.describe("Custom roles", () => {
     expect((await request.delete(`${API}/files/${mine.id}`)).status()).toBe(403);
   });
 
+  test("a read-only role sees no buttons to add, edit or delete; a role that can create sees Add but not Edit", async ({ as, owner, newPerson }) => {
+    const readAll = Object.fromEntries(["plots", "feasibility", "offers", "rates", "contacts", "tasks", "map", "bylaws", "scorecard", "settings"].map((a) => [a, "r"]));
+    const looker = unique("Looker");
+    expect((await owner.post(`${API}/admin/roles`, { data: { name: looker, perms: readAll } })).ok()).toBeTruthy();
+    const plot = await (await owner.post(`${API}/plots`, { data: plotBody("BTN") })).json();
+    await owner.post(`${API}/plots/${plot.id}/quotes`, { data: { broker: "B", quote_type: "asking", price_pkr: 600_000_000, inclusions: "" } });
+    await owner.post(`${API}/plots/${plot.id}/negotiations`, { data: { counterparty: "Seller", side: "theirs", amount_pkr: 590_000_000, made_on: "2024-01-01", valid_until: null, terms: "" } });
+    await owner.post(`${API}/tasks`, { data: { title: "Look at it", plot_id: plot.id, due_on: null, priority: "normal", notes: "", party_id: null } });
+    await owner.post(`${API}/plots/${plot.id}/financial-models`, { data: { name: "Scenario" } });
+
+    const { page } = await as(await newPerson(looker));
+    const none = async (path: string, ...names: (string | RegExp)[]) => {
+      await page.goto(path);
+      await expect(page.getByRole("main")).toBeVisible();
+      await page.waitForTimeout(1500); // let the page finish loading its data; an absent button would otherwise pass too early
+      for (const n of names) await expect(page.getByRole("link", { name: n }).or(page.getByRole("button", { name: n })), `${path}: ${n}`).toHaveCount(0);
+    };
+    await none("/dashboard/plots", "Add plot", /^Edit$/);
+    await expect(page.getByRole("combobox", { name: /^Status of / }).first()).toBeDisabled();
+    await none(`/dashboard/plots/${plot.id}`, /^Edit$/, "+ Add quote", "+ Add claim", "+ Add file", "+ Add task", "+ New negotiation", "Quick feasibility");
+    await page.locator("summary", { hasText: "Scenario" }).click(); // an opened scenario offers no changes either
+    await expect(page.getByRole("button", { name: "Make primary" }).or(page.getByRole("button", { name: "Delete" })).or(page.getByRole("link", { name: "Edit this scenario" }))).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Mark ".*" done/ })).toHaveCount(0);
+    await expect(page.getByRole("combobox", { name: "Status" })).toBeDisabled();
+    await none("/dashboard/tasks", "New task");
+    await none("/dashboard/contacts", "Add contact");
+    await none("/dashboard/offers", "New negotiation");
+    await none("/dashboard/bylaws", "Add a rule");
+    await none("/dashboard/map", "Add an anchor");
+
+    const maker = unique("Maker"); // create and read, but not update or delete
+    expect((await owner.post(`${API}/admin/roles`, { data: { name: maker, perms: { plots: "cr", contacts: "cr" } } })).ok()).toBeTruthy();
+    const him = await as(await newPerson(maker));
+    await him.page.goto("/dashboard/plots");
+    await expect(him.page.getByRole("link", { name: "Add plot" })).toBeVisible();
+    await expect(him.page.getByRole("link", { name: /^Edit$/ })).toHaveCount(0);
+    await him.page.goto("/dashboard/contacts");
+    await expect(him.page.getByRole("link", { name: "Add contact" })).toBeVisible();
+  });
+
   test("a role with Admin access cannot manage roles or take over an owner", async ({ as, owner, newPerson }) => {
     const name = unique("Helper");
     expect((await owner.post(`${API}/admin/roles`, { data: { name, perms: { plots: "r", admin: "crud" } } })).ok()).toBeTruthy();

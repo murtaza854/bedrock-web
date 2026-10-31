@@ -7,6 +7,7 @@ import { cap } from "@/lib/plots";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Due } from "@/components/followup-due";
+import { Can } from "@/components/can";
 
 const Kpi = ({ k, v, sub }: { k: string; v: number; sub?: string }) => (
   <div><p className="text-xs text-muted">{k}</p><p className="mt-1.5 text-3xl font-light tracking-tight">{v}</p><p className="mt-1 min-h-4 text-xs text-muted">{sub}</p></div>
@@ -34,7 +35,7 @@ export default function Contacts() {
           <h1 className="text-2xl font-semibold tracking-tight">Contacts</h1>
           <p className="mt-1 text-sm text-muted">Brokers, owners, lawyers and everyone else you deal with.</p>
         </div>
-        <Link href="/dashboard/contacts/new" className="rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-bg hover:opacity-90">Add contact</Link>
+        <Can area="contacts"><Link href="/dashboard/contacts/new" className="rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-bg hover:opacity-90">Add contact</Link></Can>
       </div>
 
       <div className="grid grid-cols-2 gap-x-8 gap-y-8 md:grid-cols-4">

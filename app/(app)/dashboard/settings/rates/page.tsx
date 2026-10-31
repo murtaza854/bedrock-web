@@ -5,6 +5,7 @@ import { get, post } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Errors, Field } from "@/components/ui/field";
+import { Can } from "@/components/can";
 
 const today = () => new Date().toLocaleDateString("en-CA");
 const Lbl = ({ children }: { children: React.ReactNode }) => <p className="mb-1.5 text-xs text-muted">{children}</p>;
@@ -45,7 +46,7 @@ export default function Rates() {
                 <span className="font-medium">{c.label}{!c.confirmed && <span className="ml-3"><Badge tone="warn">Not set</Badge></span>}</span>
                 <span className="flex items-center gap-5">
                   <span>{c.confirmed ? <>{c.kind === "percent" ? `${c.value}%` : `PKR ${c.value.toLocaleString()}`}<span className="ml-2 text-xs text-muted">since {dateStr(c.effective_from)}</span></> : <span className="text-muted">counts as zero</span>}</span>
-                  <button onClick={() => { setErrors({}); setEdit(edit === k ? null : k); }} className="text-xs text-muted hover:text-ink">{edit === k ? "Cancel" : c.confirmed ? "Update" : "Set"}</button>
+                  <Can area="rates" letter={c.confirmed ? "u" : "c"}><button onClick={() => { setErrors({}); setEdit(edit === k ? null : k); }} className="text-xs text-muted hover:text-ink">{edit === k ? "Cancel" : c.confirmed ? "Update" : "Set"}</button></Can>
                   {hs.filter((r) => r.confirmed).length > 1 && <button onClick={() => setHist(hist === k ? null : k)} className="text-xs text-muted hover:text-ink">History</button>}
                 </span>
               </div>

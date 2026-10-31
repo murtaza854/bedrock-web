@@ -10,6 +10,7 @@ import { Errors, Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/input";
 import { Due } from "@/components/followup-due";
+import { Can } from "@/components/can";
 
 const when = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 const Lbl = ({ children }: { children: React.ReactNode }) => <p className="mb-1.5 text-xs text-muted">{children}</p>;
@@ -68,7 +69,7 @@ export default function Contact({ params }: { params: Promise<{ id: string }> })
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Link href={`/dashboard/contacts/${id}/edit`} className="rounded-lg bg-line/50 px-3.5 py-2 text-sm font-medium hover:bg-line">Edit</Link>
+            <Can area="contacts" letter="u"><Link href={`/dashboard/contacts/${id}/edit`} className="rounded-lg bg-line/50 px-3.5 py-2 text-sm font-medium hover:bg-line">Edit</Link></Can>
           </div>
         </div>
         <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm">
@@ -81,7 +82,7 @@ export default function Contact({ params }: { params: Promise<{ id: string }> })
         {isBroker && (
           <p className="mt-4 text-xs text-muted">
             {c.mandate_verified ? "You confirmed this broker is authorised to act for the owner." : "Not confirmed that this broker is authorised by the owner."}{" "}
-            <button onClick={() => setMandate(!c.mandate_verified)} className="underline hover:text-ink">{c.mandate_verified ? "Mark unverified" : "Mark mandate verified"}</button>
+            <Can area="contacts" letter="u"><button onClick={() => setMandate(!c.mandate_verified)} className="underline hover:text-ink">{c.mandate_verified ? "Mark unverified" : "Mark mandate verified"}</button></Can>
           </p>
         )}
       </div>

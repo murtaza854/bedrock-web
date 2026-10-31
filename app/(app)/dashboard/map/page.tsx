@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Errors, Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
+import { Can } from "@/components/can";
 
 const LAYERS = [{ value: "status", label: "Status" }, { value: "score", label: "Score" }, { value: "price", label: "Price per sq yd" }];
 const LEGEND: Record<string, [string, string][]> = {
@@ -128,7 +129,7 @@ export default function MapPage() {
         </div>
         <div className="flex items-center gap-3">
           <Select label="Colour by" variant="ghost" value={layer} onChange={setLayer} options={LAYERS.map((l) => ({ value: l.value, label: `Colour by ${l.label.toLowerCase()}` }))} />
-          <Button variant={adding ? "primary" : "ghost"} onClick={() => setAdding(!adding)}>{adding ? "Cancel" : "Add an anchor"}</Button>
+          <Can area="map"><Button variant={adding ? "primary" : "ghost"} onClick={() => setAdding(!adding)}>{adding ? "Cancel" : "Add an anchor"}</Button></Can>
         </div>
       </div>
 
@@ -184,7 +185,7 @@ export default function MapPage() {
                 <td className="text-right">{a.age_days > anchor_stale_days ? <Badge tone="warn">{Math.round(a.age_days / 30)} months ago</Badge> : <span className="text-muted">{a.age_days < 1 ? "today" : `${a.age_days} days ago`}</span>}</td>
                 <td className="pl-4 text-right text-xs">
                   {removing === a.id ? <span><button onClick={async () => { await del(`/anchors/${a.id}`); setRemoving(null); loadAnchors(); }} className="text-red-500">Delete</button><button onClick={() => setRemoving(null)} className="ml-3 text-muted">Keep</button></span>
-                    : <span className="flex justify-end gap-3 text-muted"><button onClick={async () => { await post(`/anchors/${a.id}/confirm`, {}); loadAnchors(); }} className="hover:text-ink">Still there</button><button onClick={() => setRemoving(a.id)} className="hover:text-ink">Delete</button></span>}
+                    : <span className="flex justify-end gap-3 text-muted"><Can area="map" letter="u"><button onClick={async () => { await post(`/anchors/${a.id}/confirm`, {}); loadAnchors(); }} className="hover:text-ink">Still there</button></Can><Can area="map" letter="d"><button onClick={() => setRemoving(a.id)} className="hover:text-ink">Delete</button></Can></span>}
                 </td>
               </tr>))}</tbody>
           </table>

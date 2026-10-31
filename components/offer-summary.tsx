@@ -5,6 +5,7 @@ import { get } from "@/lib/api";
 import { STATUS_TONE, TURN, money, position } from "@/lib/offers";
 import { cap } from "@/lib/plots";
 import { Badge } from "@/components/ui/badge";
+import { Can } from "@/components/can";
 
 export function OfferSummary({ plotId }: { plotId: string }) {
   const [list, setList] = useState<any[] | null>(null);
@@ -14,7 +15,7 @@ export function OfferSummary({ plotId }: { plotId: string }) {
     <section className="border-t border-line pt-5">
       <div className="flex items-baseline justify-between">
         <h2 className="text-xs font-medium uppercase tracking-wider text-muted">Offers<span className="ml-3 normal-case tracking-normal">{list.filter((n) => n.status === "open").length} open</span></h2>
-        <Link href={`/dashboard/offers/new?plot=${plotId}`} className="text-sm text-muted hover:text-ink">+ New negotiation</Link>
+        <Can area="offers"><Link href={`/dashboard/offers/new?plot=${plotId}`} className="text-sm text-muted hover:text-ink">+ New negotiation</Link></Can>
       </div>
       {list.length ? (
         <ul className="mt-4 text-sm">

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { del, get, post } from "@/lib/api";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { Can } from "@/components/can";
 import { Entry, Model, Output, amt, pct } from "@/lib/feasibility";
 
 const Line = ({ k, area = "", rate = "", v, strong }: { k: string; area?: string; rate?: string; v: string; strong?: boolean }) => (
@@ -39,9 +40,9 @@ function Actions({ m, plotId, edit, onChange }: { m: Model; plotId: string; edit
   const btn = "rounded-lg bg-line/50 px-3.5 py-2 text-xs font-medium hover:bg-line";
   return (
     <div className="mt-4 flex flex-wrap items-center gap-2">
-      {edit && <Link href={`/dashboard/plots/${plotId}/feasibility?scenario=${m.id}`} className={btn}>Edit this scenario</Link>}
-      {!m.is_primary && <button type="button" onClick={() => post(`/financial-models/${m.id}/primary`, {}).then(onChange)} className={btn}>Make primary</button>}
-      <button type="button" onClick={() => setAsking(true)} className={btn}>Delete</button>
+      {edit && <Can area="feasibility" letter="u"><Link href={`/dashboard/plots/${plotId}/feasibility?scenario=${m.id}`} className={btn}>Edit this scenario</Link></Can>}
+      {!m.is_primary && <Can area="feasibility" letter="u"><button type="button" onClick={() => post(`/financial-models/${m.id}/primary`, {}).then(onChange)} className={btn}>Make primary</button></Can>}
+      <Can area="feasibility" letter="d"><button type="button" onClick={() => setAsking(true)} className={btn}>Delete</button></Can>
       <ConfirmDialog open={asking} title={`Delete ${m.name}?`} text="This removes the scenario and its numbers. It cannot be undone." confirm="Delete scenario"
         onClose={() => setAsking(false)} onConfirm={() => del(`/financial-models/${m.id}`).then(onChange)} />
     </div>
@@ -84,7 +85,7 @@ export function FinancialSummary({ plotId, bought }: { plotId: string; bought: b
     <section className="border-t border-line pt-5">
       <div className="flex items-baseline justify-between">
         <h2 className="text-xs font-medium uppercase tracking-wider text-muted">Feasibility<span className="ml-3 normal-case tracking-normal">{list.length} {list.length === 1 ? "scenario" : "scenarios"}</span></h2>
-        <span className="flex gap-5 text-sm"><Link href={`/dashboard/plots/${plotId}/feasibility`} className="text-muted hover:text-ink">Quick feasibility</Link>{bought && <Link href={`/dashboard/plots/${plotId}/financials`} className="text-muted hover:text-ink">Detailed</Link>}</span>
+        <span className="flex gap-5 text-sm"><Can area="feasibility"><Link href={`/dashboard/plots/${plotId}/feasibility`} className="text-muted hover:text-ink">Quick feasibility</Link></Can>{bought && <Link href={`/dashboard/plots/${plotId}/financials`} className="text-muted hover:text-ink">Detailed</Link>}</span>
       </div>
       {list.length ? (
         <ul className="mt-4 text-sm">{list.map(({ model: m, output: o, errors }) => (

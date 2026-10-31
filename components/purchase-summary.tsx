@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { get, post } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Can } from "@/components/can";
 import { Input } from "@/components/ui/input";
 
 const money = (n: number) => `PKR ${Math.round(n).toLocaleString()}`;
@@ -62,12 +63,12 @@ export function PurchaseSummary({ plot, onChange }: { plot: any; onChange: () =>
           {u.note && <li className="text-muted">{u.note}</li>}
         </ul>
       </div>
-      <div className="mt-4 text-xs">
+      <Can area="offers" letter="u"><div className="mt-4 text-xs">
         {voiding ? (
           <form onSubmit={doVoid} noValidate className="flex max-w-md items-center gap-2"><div className="flex-1"><Input name="reason" placeholder="Why is this being voided?" aria-invalid={!!err} className="!py-1.5 text-xs" autoFocus />{err && <p role="alert" className="mt-1 text-red-500">{err}</p>}</div>
             <button className="text-red-500">Void purchase</button><button type="button" onClick={() => setVoiding(false)} className="text-muted">Keep</button></form>
         ) : <button onClick={() => { setErr(""); setVoiding(true); }} className="text-muted hover:text-ink">Void this purchase (entered by mistake)</button>}
-      </div>
+      </div></Can>
     </section>
   );
 }

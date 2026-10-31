@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { get, patch, pkr } from "@/lib/api";
 import { pct } from "@/lib/feasibility";
+import { Can } from "@/components/can";
+import { can, useMe } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -20,6 +22,7 @@ export default function Plots() {
   const [profiles, setProfiles] = useState<any[]>([]);
   useEffect(() => { get("/score/profiles").then(setProfiles).catch(() => {}); }, []);
   const useOf = (p: any) => profiles.find((x) => x.id === (p.profile_id ?? default_profile ?? profiles[0]?.id))?.name ?? "";
+  const me = useMe();
   const [plots, setPlots] = useState<any[] | null>(null);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
@@ -73,7 +76,7 @@ export default function Plots() {
           <h1 className="text-2xl font-semibold tracking-tight">Plots</h1>
           <p className="mt-1 text-sm text-muted">{plots.length} tracked</p>
         </div>
-        <Link href="/dashboard/plots/new" className="rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-bg hover:opacity-90">Add plot</Link>
+        <Can area="plots"><Link href="/dashboard/plots/new" className="rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-bg hover:opacity-90">Add plot</Link></Can>
       </div>
 
       <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -115,10 +118,10 @@ export default function Plots() {
               <td className="pl-6 text-right">{p.spread != null && <Badge tone={p.spread >= spreadAlert / 100 ? "bad" : "neutral"}>{Math.round(p.spread * 100)}%</Badge>}</td>
               <td className="pl-6 text-right">{p.feasibility ? <>{pct(p.feasibility.margin_on_cost)}<p className="text-xs text-muted">{p.feasibility.name}</p></> : <span className="text-muted">-</span>}</td>
               <td className="relative pl-4">
-                <Select label={`Status of ${label(p)}`} variant="ghost" value={p.status} onChange={(v) => changeStatus(p, v)}
+                <Select label={`Status of ${label(p)}`} variant="ghost" value={p.status} disabled={!can(me, "plots", "u")} onChange={(v) => changeStatus(p, v)}
                   options={STATUSES.map((v) => ({ value: v, label: v[0].toUpperCase() + v.slice(1), dot: DOT[v] }))} />
               </td>
-              <td className="relative pl-4 text-right"><Link href={`/dashboard/plots/${p.id}/edit`} className="text-xs text-muted hover:text-ink">Edit</Link></td>
+              <td className="relative pl-4 text-right"><Can area="plots" letter="u"><Link href={`/dashboard/plots/${p.id}/edit`} className="text-xs text-muted hover:text-ink">Edit</Link></Can></td>
             </tr>
           ))}
           {!shown.length && (

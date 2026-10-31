@@ -1,4 +1,8 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { API, PEOPLE, expect, test } from "./fixtures";
+
+const OUTBOX = join(process.env.TMPDIR || "/tmp", "bedrock-e2e-auth-mail"); // where the test server writes the emails it "sends"
 
 const fill = async (page: any, email: string, password: string) => {
   await page.getByPlaceholder("Email").fill(email);
@@ -62,7 +66,7 @@ test.describe("Log in", () => {
   });
 });
 
-test.describe("Forgot and reset password (screens only: no email is sent yet)", () => {
+test.describe("Forgot and reset password", () => {
   test("the forgot link opens the form, which checks the email and then says to check your inbox", async ({ page }) => {
     await page.goto("/login");
     await page.getByRole("link", { name: "Forgot password?" }).click();
@@ -102,6 +106,45 @@ test.describe("Forgot and reset password (screens only: no email is sent yet)", 
     await expect(page.getByText("Passwords don't match")).toBeVisible();
     await page.getByPlaceholder("Repeat new password").fill("a-long-enough-pass");
     await page.getByRole("button", { name: "Update password" }).click();
+    await expect(page.getByText("expired or was already used")).toBeVisible(); // this token was never issued
+  });
+
+  test("an emailed link sets a new password once; an unknown email gets the same answer and no mail; requests are limited", async ({ page, request, newPerson }) => {
+    const who = await newPerson("viewer");
+    const mails = (to: string) => { try { return readFileSync(OUTBOX, "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((m) => m.to === to); } catch { return []; } };
+    await page.goto("/forgot");
+    await page.getByPlaceholder("Email").fill(who.email);
+    await page.getByRole("button", { name: "Send reset link" }).click();
+    await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
+    await expect.poll(() => mails(who.email).length).toBe(1);
+    const link = /http\S+\/reset\?token=\w+/.exec(mails(who.email)[0].body)![0];
+
+    await page.goto(link);
+    await page.getByPlaceholder("New password", { exact: true }).fill("Brand-new-pass-1");
+    await page.getByPlaceholder("Repeat new password").fill("Brand-new-pass-1");
+    await page.getByRole("button", { name: "Update password" }).click();
     await expect(page.getByRole("heading", { name: "Password updated" })).toBeVisible();
+    expect((await request.post(`${API}/login`, { data: { email: who.email, password: who.password } })).status()).toBe(401); // the old one is gone
+    expect((await request.post(`${API}/login`, { data: { email: who.email, password: "Brand-new-pass-1" } })).status()).toBe(204);
+
+    await page.goto(link); // a link works once
+    await page.getByPlaceholder("New password", { exact: true }).fill("Another-pass-123");
+    await page.getByPlaceholder("Repeat new password").fill("Another-pass-123");
+    await page.getByRole("button", { name: "Update password" }).click();
+    await expect(page.getByText("expired or was already used")).toBeVisible();
+
+    const nobody = `nobody${Date.now()}@e2e.test`; // no account: the same screen, and nothing is sent
+    await page.goto("/forgot");
+    await page.getByPlaceholder("Email").fill(nobody);
+    await page.getByRole("button", { name: "Send reset link" }).click();
+    await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
+    await page.waitForTimeout(1000);
+    expect(mails(nobody)).toHaveLength(0);
+
+    const spam = (await newPerson("viewer")).email; // three an hour per email, then it is ignored
+    for (let i = 0; i < 5; i++) expect((await request.post(`${API}/forgot`, { data: { email: spam } })).status()).toBe(204);
+    await expect.poll(() => mails(spam).length).toBe(3);
+    await page.waitForTimeout(1000);
+    expect(mails(spam)).toHaveLength(3);
   });
 });

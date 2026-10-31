@@ -5,6 +5,7 @@ import { get } from "@/lib/api";
 import { STATUS_TONE, TURN, dayStr, money, position } from "@/lib/offers";
 import { cap } from "@/lib/plots";
 import { Badge } from "@/components/ui/badge";
+import { Can } from "@/components/can";
 
 const Kpi = ({ k, v, sub }: { k: string; v: React.ReactNode; sub?: string }) => (
   <div><p className="text-xs text-muted">{k}</p><p className="mt-1.5 text-3xl font-light tracking-tight">{v}</p><p className="mt-1 min-h-4 text-xs text-muted">{sub}</p></div>
@@ -26,7 +27,7 @@ export default function Offers() {
           <h1 className="text-2xl font-semibold tracking-tight">Offers</h1>
           <p className="mt-1 text-sm text-muted">Every offer and counter-offer, per plot and per broker or owner.</p>
         </div>
-        <Link href="/dashboard/offers/new" className="rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-bg hover:opacity-90">New negotiation</Link>
+        <Can area="offers"><Link href="/dashboard/offers/new" className="rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-bg hover:opacity-90">New negotiation</Link></Can>
       </div>
 
       <div className="grid grid-cols-2 gap-x-8 gap-y-8 md:grid-cols-4">

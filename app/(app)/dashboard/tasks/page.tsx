@@ -11,6 +11,7 @@ import { Errors, Field } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Due } from "@/components/followup-due";
+import { Can } from "@/components/can";
 
 const Lbl = ({ children }: { children: React.ReactNode }) => <p className="mb-1.5 text-xs text-muted">{children}</p>;
 const Kpi = ({ k, v, sub }: { k: string; v: number; sub?: string }) => (
@@ -69,7 +70,7 @@ export default function Tasks() {
           <h1 className="text-2xl font-semibold tracking-tight">Tasks</h1>
           <p className="mt-1 text-sm text-muted">Your own to-dos, plus reminders Bedrock raises from follow-ups and offers.</p>
         </div>
-        <Button onClick={() => { setPreset(""); open("new"); }}>{form === "new" ? "Cancel" : "New task"}</Button>
+        <Can area="tasks"><Button onClick={() => { setPreset(""); open("new"); }}>{form === "new" ? "Cancel" : "New task"}</Button></Can>
       </div>
 
       {form && (
@@ -101,7 +102,7 @@ export default function Tasks() {
               {list.map((i) => i.type === "task" ? (
                 <li key={i.key} className="flex items-start justify-between gap-4 border-t border-line py-3 first:border-t-0 first:pt-0">
                   <div className="flex min-w-0 items-start gap-3">
-                    <button onClick={() => toggle(i.t, true)} aria-label={`Mark "${i.t.title}" done`} className="mt-0.5 size-4 shrink-0 rounded-full border border-muted hover:bg-accent" />
+                    <Can area="tasks" letter="u"><button onClick={() => toggle(i.t, true)} aria-label={`Mark "${i.t.title}" done`} className="mt-0.5 size-4 shrink-0 rounded-full border border-muted hover:bg-accent" /></Can>
                     <div className="min-w-0">
                       <p className="font-medium">{i.t.title}{i.high && <span className="ml-2 align-middle"><Badge tone="bad">High</Badge></span>}</p>
                       {(i.t.plot_label || i.t.contact_name) && <p className="mt-0.5 text-xs text-muted">
@@ -113,7 +114,7 @@ export default function Tasks() {
                   <div className="flex shrink-0 items-center gap-4">
                     {i.due && <Due on={i.due} />}
                     {deleting === i.t.id ? <span className="text-xs"><button onClick={() => remove(i.t.id)} className="text-red-500">Delete</button><button onClick={() => setDeleting(null)} className="ml-3 text-muted">Keep</button></span>
-                      : <span className="flex gap-3 text-xs text-muted"><button onClick={() => open(i.t)} className="hover:text-ink">Edit</button><button onClick={() => setDeleting(i.t.id)} className="hover:text-ink">Delete</button></span>}
+                      : <span className="flex gap-3 text-xs text-muted"><Can area="tasks" letter="u"><button onClick={() => open(i.t)} className="hover:text-ink">Edit</button></Can><Can area="tasks" letter="d"><button onClick={() => setDeleting(i.t.id)} className="hover:text-ink">Delete</button></Can></span>}
                   </div>
                 </li>
               ) : (
@@ -125,7 +126,7 @@ export default function Tasks() {
                   <div className="flex shrink-0 items-center gap-4">
                     {i.due && <Due on={i.due} />}
                     <span className="flex gap-3 text-xs text-muted">
-                      {i.t.action === "followup_done" && <button onClick={() => followDone(i.t.id)} className="hover:text-ink">Done</button>}
+                      {i.t.action === "followup_done" && <Can area="contacts" letter="u"><button onClick={() => followDone(i.t.id)} className="hover:text-ink">Done</button></Can>}
                       <Link href={i.t.href} className="hover:text-ink">Open →</Link>
                     </span>
                   </div>
@@ -146,7 +147,7 @@ export default function Tasks() {
               {done.slice(0, 15).map((t) => (
                 <li key={t.id} className="flex items-center justify-between gap-4 border-t border-line py-2.5 first:border-t-0 first:pt-0">
                   <span className="text-muted line-through">{t.title}</span>
-                  <span className="flex gap-3 text-xs text-muted"><button onClick={() => toggle(t, false)} className="hover:text-ink">Undo</button><button onClick={() => remove(t.id)} className="hover:text-ink">Delete</button></span>
+                  <span className="flex gap-3 text-xs text-muted"><Can area="tasks" letter="u"><button onClick={() => toggle(t, false)} className="hover:text-ink">Undo</button></Can><Can area="tasks" letter="d"><button onClick={() => remove(t.id)} className="hover:text-ink">Delete</button></Can></span>
                 </li>
               ))}
             </ul>

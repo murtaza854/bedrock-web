@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
+import { post } from "@/lib/api";
 import { AuthCard } from "@/components/auth-card";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -14,9 +15,8 @@ export default function Forgot() {
     if (!email) return setError("Enter your email");
     if (!/^\S+@\S+\.\S+$/.test(email)) return setError("Enter a valid email address");
     setError("");
-    // ponytail: UI only. Wire to POST /forgot once the API can send mail.
-    await new Promise((r) => setTimeout(r, 500));
-    setSent(email);
+    try { await post("/forgot", { email }); } catch { return setError("Could not reach the server, try again"); }
+    setSent(email); // the same answer whether or not an account exists
   };
   if (sent)
     return (
