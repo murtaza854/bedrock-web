@@ -15,6 +15,7 @@ const csp = [
 
 export default {
   distDir: process.env.NEXT_DIST || ".next",
+  ...(process.env.NEXT_STANDALONE ? { output: "standalone" } : {}), // the deploy build: a small self-contained server
   async headers() {
     const common = [
       { key: "X-Frame-Options", value: "DENY" },
