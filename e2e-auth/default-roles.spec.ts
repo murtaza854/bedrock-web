@@ -21,6 +21,6 @@ test.describe("Built-in roles", () => {
     const id = (await (await owner.get(`${API}/admin/users`)).json())[0].id;
     expect((await request.patch(`${API}/admin/users/${id}`, { data: { role: "viewer" } })).status()).toBe(403);
     expect((await request.post(`${API}/admin/users/${id}/password`, { data: { password: "Granite-lantern-3092" } })).status()).toBe(403);
-    expect((await request.post(`${API}/account/name`, { data: { name: "My Own Name" } })).status()).toBe(204); // their own name is theirs to change
+    expect((await request.post(`${API}/account/name`, { data: { first_name: "My", last_name: "Own Name" } })).status()).toBe(204); // their own name is theirs to change
   });
 });

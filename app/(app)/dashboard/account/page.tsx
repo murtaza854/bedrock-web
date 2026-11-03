@@ -25,16 +25,17 @@ const device = (ua: string) => {
   return o ? `${b} on ${o}` : b;
 };
 
-function NameForm({ current }: { current: string }) {
+function NameForm({ first, last }: { first: string; last: string }) {
   const [msg, setMsg] = useState("");
   const save = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const name = String(new FormData(e.currentTarget).get("name") ?? "").trim();
-    try { await post("/account/name", { name }); resetMe(); setMsg("Saved"); } catch (x) { setMsg((x as Error).message); }
+    const f = new FormData(e.currentTarget);
+    try { await post("/account/name", { first_name: String(f.get("first_name") ?? "").trim(), last_name: String(f.get("last_name") ?? "").trim() }); resetMe(); setMsg("Saved"); } catch (x) { setMsg((x as Error).message); }
   };
   return (
-    <form onSubmit={save} noValidate className="flex max-w-md items-start gap-3">
-      <Field name="name" defaultValue={current} placeholder="Your name" maxLength={100} aria-label="Your name" />
+    <form onSubmit={save} noValidate className="flex max-w-xl flex-wrap items-start gap-3">
+      <div className="min-w-40 flex-1"><Field name="first_name" defaultValue={first} placeholder="First name" maxLength={60} aria-label="First name" /></div>
+      <div className="min-w-40 flex-1"><Field name="last_name" defaultValue={last} placeholder="Last name" maxLength={60} aria-label="Last name" /></div>
       <Button>Save name</Button>
       {msg && <p role="status" className="self-center text-sm text-muted">{msg}</p>}
     </form>
@@ -103,7 +104,7 @@ export default function Account() {
         <p className="rounded-xl bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">Login is switched off while you build (<code>DEV_NO_AUTH</code>), so there is no password, two-factor or session to manage. Everyone is treated as an owner. Run the API with <code>make run DEV_NO_AUTH=0</code> to use real accounts.</p>
       ) : (
         <>
-          <Section title="Name"><NameForm current={m.name} /></Section>
+          <Section title="Name"><NameForm first={m.first_name ?? m.name} last={m.last_name ?? ""} /></Section>
           {m.passwords !== false && <Section title="Password"><Password /></Section>}
           {m.passwords !== false && <Section title="Two-factor sign-in (authenticator app)" note={m.passkeys && !m.totp_enabled ? "You have a passkey, which already counts as two-factor. The app is optional." : undefined}><TwoFactor on={m.totp_enabled} reload={() => setTick((t) => t + 1)} /></Section>}
           <Section title="Passkeys" note={m.passwords === false ? `Passwords are turned off. You sign in with a passkey, and you need ${m.passkeys_needed ?? 1}.` : undefined}><Passkeys /></Section>

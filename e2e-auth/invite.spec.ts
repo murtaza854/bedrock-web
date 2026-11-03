@@ -69,7 +69,7 @@ test.describe("Invitations", () => {
     expect((await owner.post(`${API}/invite/lookup`, { data: { token: tokenOf(first.link) } })).status()).toBe(400);
     expect((await owner.post(`${API}/invite/lookup`, { data: { token: tokenOf(second.link) } })).status()).toBe(200);
 
-    const cli = spawnSync(BIN, ["invite", email, "Named By Command"], { env: { ...process.env, DATABASE_URL: DB, DOCS_KEY: "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff", DOCS_DIR: join(process.env.TMPDIR || "/tmp", "bedrock-adduser-docs") }, encoding: "utf8" });
+    const cli = spawnSync(BIN, ["invite", email, "Named", "By Command"], { env: { ...process.env, DATABASE_URL: DB, DOCS_KEY: "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff", DOCS_DIR: join(process.env.TMPDIR || "/tmp", "bedrock-adduser-docs") }, encoding: "utf8" });
     expect(cli.status, cli.stderr).toBe(0);
     const link = /https?:\/\/\S+/.exec(cli.stderr)![0];
     expect((await (await owner.get(`${API}/admin/users`)).json()).find((u: any) => u.email === email).name).toBe("Named By Command");

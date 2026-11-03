@@ -208,12 +208,14 @@ test.describe("Your name", () => {
     const who = await newPerson("viewer");
     const { page, request } = await as(who);
     await page.goto("/dashboard/account");
-    await page.getByLabel("Your name").fill("  Taylor Test  ");
+    await page.getByLabel("First name", { exact: true }).fill("  Taylor ");
+    await page.getByLabel("Last name", { exact: true }).fill(" Test  ");
     await page.getByRole("button", { name: "Save name" }).click();
     await expect(page.getByRole("status")).toHaveText("Saved");
-    expect((await (await request.get(`${API}/me`)).json()).name).toBe("Taylor Test"); // trimmed
+    expect((await (await request.get(`${API}/me`)).json()).name).toBe("Taylor Test"); // trimmed, and combined
     await page.reload();
-    await expect(page.getByLabel("Your name")).toHaveValue("Taylor Test");
+    await expect(page.getByLabel("First name", { exact: true })).toHaveValue("Taylor");
+    await expect(page.getByLabel("Last name", { exact: true })).toHaveValue("Test");
     await expect(page.getByText(`Taylor Test · ${who.email}`)).toBeVisible();
   });
 });

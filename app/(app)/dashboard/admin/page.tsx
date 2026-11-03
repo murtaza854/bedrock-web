@@ -64,7 +64,8 @@ function Users() {
       {add && (
         <form onSubmit={create} noValidate className="grid items-start gap-4 md:grid-cols-4">
           <div><Lbl>Email</Lbl><Field name="email" type="email" error={errors.email} autoFocus /></div>
-          <div><Lbl>Name (optional)</Lbl><Field name="name" /></div>
+          <div><Lbl>First name (optional)</Lbl><Field name="first_name" /></div>
+          <div><Lbl>Last name (optional)</Lbl><Field name="last_name" /></div>
           <div><Lbl>Role</Lbl><Select label="Role" value={role} onChange={setRole} options={roles.map((r) => ({ value: r, label: cap(r) }))} /></div>
           <div className="flex items-center gap-3 md:col-span-4"><Button>Invite person</Button><p className="text-xs text-muted">They get a link to choose their own password, then turn on two-factor.</p>{errors.form && <p role="alert" className="text-sm text-red-500">{errors.form}</p>}</div>
         </form>
@@ -83,7 +84,7 @@ function Users() {
               <td className="text-right text-muted">{when(u.last_login_at)}</td>
               <td className="pl-4 text-right text-xs">
                 {rename === u.id ? (
-                  <form onSubmit={(e) => { e.preventDefault(); const name = String(new FormData(e.currentTarget).get("name") ?? ""); act(() => patch(`/admin/users/${u.id}`, { name }), "Name saved"); }} noValidate className="flex items-center justify-end gap-2"><Input name="name" defaultValue={u.name} placeholder="Name" maxLength={100} aria-label={`Name of ${u.email}`} className="!py-1 text-xs" autoFocus /><button className="text-ink">Save</button><button type="button" onClick={() => setRename(null)} className="text-muted">Cancel</button></form>
+                  <form onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget); act(() => patch(`/admin/users/${u.id}`, { first_name: String(f.get("first_name") ?? ""), last_name: String(f.get("last_name") ?? "") }), "Name saved"); }} noValidate className="flex items-center justify-end gap-2"><Input name="first_name" defaultValue={u.first_name} placeholder="First name" maxLength={60} aria-label={`First name of ${u.email}`} className="!py-1 text-xs" autoFocus /><Input name="last_name" defaultValue={u.last_name} placeholder="Last name" maxLength={60} aria-label={`Last name of ${u.email}`} className="!py-1 text-xs" /><button className="text-ink">Save</button><button type="button" onClick={() => setRename(null)} className="text-muted">Cancel</button></form>
                 ) : pw === u.id ? (
                   <form onSubmit={(e) => setPassword(e, u.id)} noValidate className="flex items-center justify-end gap-2"><div><Input name="password" type="password" placeholder="New password" aria-invalid={!!errors.pw} className="!py-1 text-xs" autoFocus />{errors.pw && <p role="alert" className="mt-1 text-red-500">{errors.pw}</p>}</div><button className="text-ink">Set</button><button type="button" onClick={() => setPw(null)} className="text-muted">Cancel</button></form>
                 ) : confirm?.startsWith(`${u.id}:`) ? (

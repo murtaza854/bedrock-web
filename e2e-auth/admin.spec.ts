@@ -34,7 +34,8 @@ test.describe("People", () => {
     await expect(page.getByText("Enter a valid email address")).toBeVisible();
 
     await page.locator('input[name="email"]').fill(email);
-    await page.locator('input[name="name"]').fill("Added Person");
+    await page.locator('input[name="first_name"]').fill("Added");
+    await page.locator('input[name="last_name"]').fill("Person");
     await page.getByRole("combobox", { name: "Role", exact: true }).click();
     await page.getByRole("option", { name: "Viewer" }).click();
     await page.getByRole("button", { name: "Invite person" }).click();
@@ -252,7 +253,8 @@ test.describe("Backups", () => {
     const { page } = await as(PEOPLE.owner);
     await page.goto("/dashboard/admin");
     await row(page, target.email).getByRole("button", { name: "Rename" }).click();
-    await page.getByLabel(`Name of ${target.email}`).fill("Renamed By Owner");
+    await page.getByLabel(`First name of ${target.email}`).fill("Renamed");
+    await page.getByLabel(`Last name of ${target.email}`).fill("By Owner");
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("status")).toHaveText("Name saved");
     await expect(row(page, target.email)).toContainText("Renamed By Owner");
@@ -263,7 +265,7 @@ test.describe("Backups", () => {
     const helper = await newPerson(role);
     const them = await as(helper);
     const id = (await (await owner.get(`${API}/admin/users`)).json()).find((u: any) => u.email === target.email).id;
-    const refused = await them.request.patch(`${API}/admin/users/${id}`, { data: { name: "Nope" } });
+    const refused = await them.request.patch(`${API}/admin/users/${id}`, { data: { first_name: "Nope" } });
     expect(refused.status()).toBe(403);
     expect(await refused.text()).toContain("only an owner");
   });
