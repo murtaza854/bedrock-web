@@ -1,0 +1,37 @@
+name: Deploy web
+# Every push to main builds the site and puts it on the Lightsail server. Same three secrets as the API repo
+# (SSH_HOST, SSH_KEY, SSH_KNOWN_HOSTS), plus one variable (Settings > Secrets and variables > Actions > Variables):
+#   API_URL   the API's public address, e.g. https://api.bedrock.tech2olabs.com (it is built into the site)
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+concurrency: deploy-web
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build (this also type-checks)
+        env:
+          NEXT_PUBLIC_API: ${{ vars.API_URL }}
+          NEXT_STANDALONE: "1"
+        run: |
+          test -n "$NEXT_PUBLIC_API" || { echo "set the API_URL variable"; exit 1; }
+          node node_modules/next/dist/bin/next build
+          mkdir -p stage/.next && cp -r .next/standalone/. stage/ && cp -r .next/static stage/.next/static
+          tar czf web.tgz -C stage .
+      - name: Sign in to the server
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+      - name: Copy and restart
+        run: |
+          scp -i ~/.ssh/id_deploy web.tgz deploy@${{ secrets.SSH_HOST }}:/tmp/bedrock-web.tgz
+          ssh -i ~/.ssh/id_deploy deploy@${{ secrets.SSH_HOST }} 'find /opt/bedrock/web -mindepth 1 -delete && tar xzf /tmp/bedrock-web.tgz -C /opt/bedrock/web && rm /tmp/bedrock-web.tgz && sudo systemctl restart bedrock-web'
