@@ -34,18 +34,20 @@ test.describe("Invitations", () => {
     await page.getByPlaceholder("Repeat password").fill("Walnut-bridge-4417");
     await page.getByRole("button", { name: "Continue" }).click();
 
-    await expect(page).toHaveURL(/\/dashboard\/account$/);
+    await expect(page).toHaveURL(/\/onboarding$/);
     await expect(page.getByText("Step 2 of 3")).toBeVisible();
-    await page.goto("/dashboard/plots"); // every other page sends them back
-    await expect(page).toHaveURL(/\/dashboard\/account$/);
+    await page.goto("/dashboard/plots"); // every other page sends them back to the wizard
+    await expect(page).toHaveURL(/\/onboarding$/);
 
     const request = ctx.request; // signed in by the link
     expect((await request.get(`${API}/plots`)).status()).toBe(403);
     expect((await (await request.get(`${API}/me`)).json()).onboarding).toBe(true);
     const { secret } = await (await request.post(`${API}/account/2fa/setup`, { data: {} })).json();
-    const on = await request.post(`${API}/account/2fa/enable`, { data: { code: totp(secret) } });
+    const on = await request.post(`${API}/account/2fa/enable`, { data: { code: totp(secret, -1), code2: totp(secret) } });
     expect(on.ok()).toBeTruthy();
     expect((await on.json()).backup_codes.length).toBeGreaterThan(0);
+    expect((await request.get(`${API}/plots`)).status()).toBe(403); // still held: Finish is the last step
+    expect((await request.post(`${API}/account/onboarding/finish`, { data: {} })).status()).toBe(204);
     expect((await request.get(`${API}/plots`)).status()).toBe(200);
     expect((await (await request.get(`${API}/me`)).json()).onboarding).toBe(false);
 

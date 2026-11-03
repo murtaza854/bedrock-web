@@ -9,7 +9,7 @@ import { AuthCard } from "@/components/auth-card";
 import { Button } from "@/components/ui/button";
 import { Errors, Field } from "@/components/ui/field";
 
-// Step 1 of 3 of getting started: choose a password. Step 2 (two-factor) and step 3 (backup codes) are on the Account page, which is the only page that opens until they are done.
+// Step 1 of 3 of getting started: choose a password. Step 2 (a passkey or the authenticator app) is the setup wizard, which is the only page that opens until they finish.
 export function WelcomeForm({ token }: { token: string }) {
   const router = useRouter();
   const [who, setWho] = useState<{ email: string; name: string } | null>(null);
@@ -29,7 +29,7 @@ export function WelcomeForm({ token }: { token: string }) {
     if (Object.keys(err).length) return;
     try { await post("/invite/accept", { token, password: pw }); } catch (x) { return setErrors({ password: (x as Error).message || "Could not set the password, try again" }); }
     resetMe();
-    router.replace("/dashboard/account");
+    router.replace("/onboarding");
   };
   if (bad)
     return (

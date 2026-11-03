@@ -9,10 +9,12 @@ async function turnOn2fa(page: Page) {
   await expect(page.getByAltText("QR code to scan with your authenticator app")).toBeVisible();
   const secret = ((await page.locator("span.font-mono").first().innerText()) || "").replace(/\s/g, "");
   expect(secret).toMatch(/^[A-Z2-7]{16,}$/);
-  await page.getByPlaceholder("123456").fill("000000");
+  await page.getByPlaceholder("First code").fill("000000");
+  await page.getByPlaceholder("Next code").fill("000000");
   await page.getByRole("button", { name: "Turn on" }).click();
   await expect(page.getByText(/that code is not right/)).toBeVisible();
-  await page.getByPlaceholder("123456").fill(totp(secret));
+  await page.getByPlaceholder("First code").fill(totp(secret, -1)); // two in a row: the one before this step and this one
+  await page.getByPlaceholder("Next code").fill(totp(secret));
   await page.getByRole("button", { name: "Turn on" }).click();
   await expect(page.getByText("Save these backup codes now.")).toBeVisible();
   const codes = await page.locator("ul.font-mono li").allInnerTexts();

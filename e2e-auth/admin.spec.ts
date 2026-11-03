@@ -38,7 +38,7 @@ test.describe("People", () => {
     await page.getByRole("combobox", { name: "Role", exact: true }).click();
     await page.getByRole("option", { name: "Viewer" }).click();
     await page.getByRole("button", { name: "Invite person" }).click();
-    await expect(page.getByRole("status")).toContainText("/welcome?token=");
+    await expect(page.getByRole("status")).toHaveText(`Invitation emailed to ${email}`); // just that, no link when the email went out
     await expect(row(page, email)).toContainText("Added Person");
     await expect(row(page, email)).toContainText("Invited");
     await expect(page.getByRole("combobox", { name: `Role of ${email}` })).toContainText("Viewer");
@@ -124,14 +124,14 @@ test.describe("People", () => {
     const who = await newPerson();
     const them = await as(who);
     const setup = await (await them.request.post(`${API}/account/2fa/setup`, { data: {} })).json();
-    expect((await them.request.post(`${API}/account/2fa/enable`, { data: { code: totp(setup.secret) } })).status()).toBe(200);
+    expect((await them.request.post(`${API}/account/2fa/enable`, { data: { code: totp(setup.secret, -1), code2: totp(setup.secret) } })).status()).toBe(200);
     const probe = await pwRequest.newContext();
     const asked = await probe.post(`${API}/login`, { data: { email: who.email, password: who.password } });
     expect((await asked.json()).needs_2fa).toBe(true);
 
     const { page } = await as(PEOPLE.owner);
     await page.goto("/dashboard/admin");
-    await expect(row(page, who.email)).toContainText("On");
+    await expect(row(page, who.email)).toContainText("App");
     await row(page, who.email).getByRole("button", { name: "Reset two-factor" }).click();
     await row(page, who.email).getByRole("button", { name: "Confirm" }).click();
     await expect(page.getByRole("status")).toContainText("Two-factor reset");

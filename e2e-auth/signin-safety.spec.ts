@@ -74,15 +74,14 @@ test.describe("Sign-in safety", () => {
       expect(await blocked.text()).toContain("two-factor");
       expect((await (await request.get(`${API}/me`)).json()).must_setup_2fa).toBe(true); // /me, /logout and /account still work
 
-      await page.goto("/dashboard/plots"); // every other page sends them to Account
-      await expect(page).toHaveURL(/\/dashboard\/account$/);
-      await expect(page.getByText("Turn on two-factor sign-in to continue.")).toBeVisible();
+      await page.goto("/dashboard/plots"); // every other page sends them to the setup wizard
+      await expect(page).toHaveURL(/\/onboarding$/);
+      await expect(page.getByRole("heading", { name: "Secure your account" })).toBeVisible();
 
       const { secret } = await (await request.post(`${API}/account/2fa/setup`, { data: {} })).json();
-      expect((await request.post(`${API}/account/2fa/enable`, { data: { code: totp(secret) } })).ok()).toBeTruthy();
-      expect((await request.get(`${API}/plots`)).status()).toBe(200); // now everything opens
+      expect((await request.post(`${API}/account/2fa/enable`, { data: { code: totp(secret, -1), code2: totp(secret) } })).ok()).toBeTruthy();
+      expect((await request.get(`${API}/plots`)).status()).toBe(200); // now everything opens (not invited, so no Finish step)
       await page.reload();
-      await expect(page.getByText("Turn on two-factor sign-in to continue.")).toHaveCount(0);
       await page.goto("/dashboard/plots");
       await expect(page).toHaveURL(/\/dashboard\/plots$/);
       const off = await request.post(`${API}/account/2fa/disable`, { data: { password: who.password, code: totp(secret, 1) } });

@@ -47,7 +47,9 @@ function Users() {
     if (Object.keys(err).length) return;
     try { const r = await post("/admin/users", { ...f, role }); setAdd(false); setErrors({}); showInvite(f.email, r); load(); } catch (x) { setErrors({ form: (x as Error).message }); }
   };
-  const showInvite = (email: string, r: { link: string; emailed: boolean }) => setMsg(`${r.emailed ? `Invitation emailed to ${email}. ` : "Email isn't set up, so send them this link yourself. "}It works once, for three days: ${r.link}`);
+  // when the email went out the screen only says so; the link is shown only when there was no email to send it
+  const showInvite = (email: string, r: { link: string; emailed: boolean }) => setMsg(r.emailed ? `Invitation emailed to ${email}` : `Email isn't set up, so send ${email} this link yourself. It works once, for three days: ${r.link}`);
+  const copyLink = async (u: { id: number; email: string }) => { const r = await post(`/admin/users/${u.id}/invite?copy=1`, {}); try { await navigator.clipboard.writeText(r.link); setMsg(`Link for ${u.email} copied. It works once, for three days. Any earlier link no longer works.`); } catch { setMsg(`Copy this link for ${u.email}: ${r.link}`); } };
   const setPassword = async (e: React.FormEvent<HTMLFormElement>, id: number) => {
     e.preventDefault();
     const p = String(new FormData(e.currentTarget).get("password") ?? "");
@@ -76,18 +78,20 @@ function Users() {
               <td className="py-3"><span className="font-medium">{u.name || u.email}</span>{self && <span className="ml-2"><Badge>You</Badge></span>}{off && <span className="ml-2"><Badge tone="bad">Switched off</Badge></span>}{u.invited && <span className="ml-2"><Badge tone="warn">Invited</Badge></span>}
                 {u.name && <p className="text-xs text-muted">{u.email}</p>}</td>
               <td><Select label={`Role of ${u.email}`} variant="ghost" className="-ml-2" value={u.role} disabled={self} onChange={(v) => act(() => patch(`/admin/users/${u.id}`, { role: v }), `${u.email} is now ${/^[aeiou]/i.test(v) ? "an" : "a"} ${v}. They were signed out.`)} options={roles.map((r) => ({ value: r, label: cap(r) }))} /></td>
-              <td>{u.totp_enabled ? <Badge tone="good">On</Badge> : <Badge tone="warn">Off</Badge>}</td>
+              <td>{u.totp_enabled || u.passkeys ? <Badge tone="good">{u.totp_enabled && u.passkeys ? "App + passkey" : u.passkeys ? "Passkey" : "App"}</Badge> : <Badge tone="warn">Off</Badge>}</td>
               <td className="text-right text-muted">{when(u.last_login_at)}</td>
               <td className="pl-4 text-right text-xs">
                 {pw === u.id ? (
                   <form onSubmit={(e) => setPassword(e, u.id)} noValidate className="flex items-center justify-end gap-2"><div><Input name="password" type="password" placeholder="New password" aria-invalid={!!errors.pw} className="!py-1 text-xs" autoFocus />{errors.pw && <p role="alert" className="mt-1 text-red-500">{errors.pw}</p>}</div><button className="text-ink">Set</button><button type="button" onClick={() => setPw(null)} className="text-muted">Cancel</button></form>
                 ) : confirm?.startsWith(`${u.id}:`) ? (
-                  <span><button onClick={() => act(() => confirm.endsWith("2fa") ? post(`/admin/users/${u.id}/reset-2fa`, {}) : patch(`/admin/users/${u.id}`, { disabled: !off }), confirm.endsWith("2fa") ? "Two-factor reset. They can set it up again." : "")} className="text-red-500">Confirm</button><button onClick={() => setConfirm(null)} className="ml-3 text-muted">Cancel</button></span>
+                  <span><button onClick={() => act(() => confirm.endsWith("2fa") ? post(`/admin/users/${u.id}/reset-2fa`, {}) : confirm.endsWith("keys") ? post(`/admin/users/${u.id}/remove-passkeys`, {}) : patch(`/admin/users/${u.id}`, { disabled: !off }), confirm.endsWith("2fa") ? "Two-factor reset. They can set it up again." : confirm.endsWith("keys") ? "Passkeys removed. They were signed out, and must set up a passkey or the app to get back in." : "")} className="text-red-500">Confirm</button><button onClick={() => setConfirm(null)} className="ml-3 text-muted">Cancel</button></span>
                 ) : (
                   <span className="flex flex-wrap justify-end gap-x-4 gap-y-1 text-muted">
-                    {u.invited && <button onClick={() => act(async () => showInvite(u.email, await post(`/admin/users/${u.id}/invite`, {})))} className="hover:text-ink">New invite link</button>}
+                    {u.invited && <button onClick={() => act(async () => showInvite(u.email, await post(`/admin/users/${u.id}/invite`, {})))} className="hover:text-ink">Email a new invite</button>}
+                    {u.invited && <button onClick={() => act(() => copyLink(u))} className="hover:text-ink">Copy link</button>}
                     <button onClick={() => { setErrors({}); setPw(u.id); }} className="hover:text-ink">Set password</button>
                     {u.totp_enabled && <button onClick={() => setConfirm(`${u.id}:2fa`)} className="hover:text-ink">Reset two-factor</button>}
+                    {!!u.passkeys && <button onClick={() => setConfirm(`${u.id}:keys`)} className="hover:text-ink">Remove passkeys</button>}
                     {!self && <button onClick={() => setConfirm(`${u.id}:off`)} className="hover:text-ink">{off ? "Switch on" : "Switch off"}</button>}
                   </span>
                 )}
@@ -292,7 +296,7 @@ export default function Admin() {
       {s && (
         <div className="grid grid-cols-2 gap-x-8 gap-y-8 md:grid-cols-4">
           <Kpi k="People" v={s.users} sub={`${s.owners} owner${s.owners === 1 ? "" : "s"}`} />
-          <Kpi k="Without two-factor" v={s.without_2fa} sub={s.without_2fa ? "turn it on under Account" : "everyone is protected"} warn={s.without_2fa > 0 && s.users > 0} />
+          <Kpi k="Without two-factor" v={s.without_2fa} sub={s.without_2fa ? "an app or a passkey" : "everyone is protected"} warn={s.without_2fa > 0 && s.users > 0} />
           <Kpi k="Failed sign-ins today" v={s.failed_logins} sub={`${s.denied} refused actions`} warn={s.failed_logins >= 5} />
           <Kpi k="Last good backup" v={<span className="text-2xl">{ago(s.last_backup)}</span>} sub={s.failed_backups ? `${s.failed_backups} failed this week` : ""} warn={!s.last_backup} />
         </div>
