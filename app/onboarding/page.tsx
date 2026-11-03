@@ -1,4 +1,5 @@
 "use client";
+import { LogoMark } from "@/components/logo";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { post } from "@/lib/api";
@@ -41,6 +42,7 @@ export default function Onboarding() {
       <Contours />
       <div className="grid w-full max-w-2xl gap-6 rounded-xl border border-line bg-surface/90 p-6 shadow-sm backdrop-blur sm:p-8">
         <div>
+          <LogoMark className="mb-3 size-9 text-accent" />
           <p className="text-xs text-muted">Step 2 of 3</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">Secure your account</h1>
           <p className="mt-2 text-sm text-muted">{passkeysOnly ? `Bedrock signs you in with a passkey. You need ${need}${need > 1 ? ": add one for each device you use, so losing one never locks you out" : ""}. Bedrock opens when you finish.` : "Choose at least one way to prove it's you when you sign in. You can set up both, or skip one. Bedrock opens when you finish."}</p>

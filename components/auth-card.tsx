@@ -1,4 +1,5 @@
 import { Contours } from "./contours";
+import { LogoMark } from "./logo";
 
 // Shared shell for login, forgot and reset: contour backdrop + centred card.
 export function AuthCard({ children, onSubmit }: { children: React.ReactNode; onSubmit?: React.FormEventHandler<HTMLFormElement> }) {
@@ -6,7 +7,7 @@ export function AuthCard({ children, onSubmit }: { children: React.ReactNode; on
   return (
     <main className="grid min-h-screen place-items-center px-4">
       <Contours />
-      {onSubmit ? <form onSubmit={onSubmit} noValidate className={cls}>{children}</form> : <div className={cls}>{children}</div>}
+      {onSubmit ? <form onSubmit={onSubmit} noValidate className={cls}><LogoMark className="size-9 text-accent" />{children}</form> : <div className={cls}><LogoMark className="size-9 text-accent" />{children}</div>}
     </main>
   );
 }

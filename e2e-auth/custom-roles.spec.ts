@@ -139,7 +139,8 @@ test.describe("Custom roles", () => {
     const name = unique("Screen");
     await page.goto("/dashboard/admin");
     await page.getByRole("button", { name: "Roles", exact: true }).click();
-    await page.getByRole("button", { name: "New role" }).click();
+    await page.getByRole("link", { name: "New role" }).click();
+    await expect(page).toHaveURL(/\/admin\/roles\/new$/); // its own page
     await page.getByLabel("Role name").fill(name);
     await page.getByLabel("Plots, quotes and facts Update").check(); // Update needs Read, so Read comes with it
     await expect(page.getByLabel("Plots, quotes and facts Read")).toBeChecked();
@@ -158,9 +159,9 @@ test.describe("Custom roles", () => {
     await page.keyboard.press("Escape");
 
     await page.getByRole("button", { name: "Roles", exact: true }).click();
-    await row.getByRole("button", { name: "Edit" }).click();
+    await row.getByRole("link", { name: "Edit" }).click();
     await expect(page.getByLabel("Tasks Create")).toBeChecked(); // saved
-    await page.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Cancel" }).click(); // back on the Roles tab
     await row.getByRole("button", { name: "Delete" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Delete role" }).click();
     await expect(row).toHaveCount(0);

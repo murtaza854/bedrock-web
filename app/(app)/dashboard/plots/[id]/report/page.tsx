@@ -1,4 +1,5 @@
 "use client";
+import { LogoMark } from "@/components/logo";
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { get } from "@/lib/api";
@@ -10,7 +11,7 @@ import { useSettings } from "@/lib/settings";
 const money = (n: number) => `PKR ${Math.round(n).toLocaleString()}`;
 const day = (d?: string | null) => (d ? new Date(d).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "-");
 const H = ({ children }: { children: React.ReactNode }) => <h2 className="mb-1.5 border-b border-neutral-300 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">{children}</h2>;
-const Big = ({ k, v, sub }: { k: string; v: React.ReactNode; sub?: string }) => <div><p className="text-[9px] uppercase tracking-wide text-neutral-500">{k}</p><p className="text-lg font-light leading-tight">{v}</p>{sub && <p className="text-[9px] text-neutral-500">{sub}</p>}</div>;
+const Big = ({ k, v, sub }: { k: string; v: React.ReactNode; sub?: string }) => <div><LogoMark className="mb-1 size-5 text-neutral-700" /><p className="text-[9px] uppercase tracking-wide text-neutral-500">{k}</p><p className="text-lg font-light leading-tight">{v}</p>{sub && <p className="text-[9px] text-neutral-500">{sub}</p>}</div>;
 
 // One page, built to print: Print or Save as PDF from the browser.
 export default function Report({ params }: { params: Promise<{ id: string }> }) {

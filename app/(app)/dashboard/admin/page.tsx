@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { del as remove, get, patch, post, put } from "@/lib/api";
 import { can, useMe } from "@/lib/auth";
@@ -13,8 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 
 const TABS = ["Users", "Roles", "Audit log", "Backups"] as const;
-const AREAS: Record<string, string> = { plots: "Plots, quotes and facts", feasibility: "Feasibility", offers: "Offers and purchases", rates: "Tax and fee rates", contacts: "Contacts", tasks: "Tasks", map: "Map", bylaws: "Bylaws", scorecard: "Scorecard", settings: "Settings", admin: "Admin" };
-const LETTERS: [string, string][] = [["c", "Create"], ["r", "Read"], ["u", "Update"], ["d", "Delete"]];
 const Lbl = ({ children }: { children: React.ReactNode }) => <p className="mb-1.5 text-xs text-muted">{children}</p>;
 const Kpi = ({ k, v, sub, warn }: { k: string; v: React.ReactNode; sub?: string; warn?: boolean }) => (
   <div><p className="text-xs text-muted">{k}</p><p className={`mt-1.5 text-3xl font-light tracking-tight ${warn ? "text-red-500" : ""}`}>{v}</p><p className="mt-1 min-h-4 text-xs text-muted">{sub}</p></div>
@@ -218,39 +217,21 @@ function Backups() {
   );
 }
 
-// Roles: what each one may do in each tab. The three built-in ones are fixed; any others are yours to make.
-type Draft = { id?: number; name: string; perms: Record<string, string>; builtin?: boolean };
+// Roles: the list. Making or changing one happens on its own page (roles/[id]).
 function Roles() {
   const me = useMe();
   const owner = me?.role === "owner";
   const [d, setD] = useState<any>(null);
-  const [edit, setEdit] = useState<Draft | null>(null);
   const [doomed, setDoomed] = useState<any>(null);
-  const [err, setErr] = useState("");
   const load = () => get("/admin/roles").then(setD);
   useEffect(() => { load(); }, []);
   if (!d) return null;
-  const areas: string[] = d.areas;
-  // Read comes with anything else, and taking Read away takes the rest with it
-  const toggle = (a: string, l: string) => setEdit((e) => {
-    if (!e || e.builtin) return e;
-    const has = (e.perms[a] ?? "").includes(l);
-    let next = LETTERS.map(([k]) => k).filter((k) => (k === l ? !has : (e.perms[a] ?? "").includes(k))).join("");
-    if (l !== "r" && !has && !next.includes("r")) next = "r" + next;
-    if (l === "r" && has) next = "";
-    return { ...e, perms: { ...e.perms, [a]: next } };
-  });
-  const save = async () => {
-    if (!edit) return;
-    setErr("");
-    try { await (edit.id ? put(`/admin/roles/${edit.id}`, { name: edit.name, perms: edit.perms }) : post("/admin/roles", { name: edit.name, perms: edit.perms })); setEdit(null); load(); }
-    catch (x) { setErr((x as Error).message); }
-  };
+  const btn = "rounded-lg bg-line/50 px-3 py-1.5 font-medium hover:bg-line";
   return (
     <div className="grid gap-8">
       <div className="flex items-center justify-between">
         <p className="max-w-xl text-sm text-muted">A role says, for each tab, what a person may create, read, update and delete. The server enforces it, and a role change signs the person out so it applies straight away.</p>
-        {owner && <Button onClick={() => { setErr(""); setEdit({ name: "", perms: Object.fromEntries(areas.map((a) => [a, ""])) }); }}>New role</Button>}
+        {owner && <Link href="/dashboard/admin/roles/new" className="inline-flex items-center rounded-lg bg-ink px-4 py-2 text-sm font-medium text-bg hover:opacity-90">New role</Link>}
       </div>
       <table className="w-full text-sm">
         <thead><tr className="text-xs text-muted"><th className="pb-2 text-left font-normal">Role</th><th className="pb-2 text-right font-normal">People</th><th /></tr></thead>
@@ -259,27 +240,11 @@ function Roles() {
             <td className="py-3 font-medium">{cap(r.name)}{r.builtin && <span className="ml-2"><Badge>Built in</Badge></span>}</td>
             <td className="text-right text-muted">{r.people}</td>
             <td className="pl-4 text-right text-xs"><span className="flex justify-end gap-2">
-              <button onClick={() => { setErr(""); setEdit({ id: r.id, name: r.name, perms: { ...r.perms }, builtin: r.builtin }); }} className="rounded-lg bg-line/50 px-3 py-1.5 font-medium hover:bg-line">{r.builtin || !owner ? "View" : "Edit"}</button>
-              {!r.builtin && owner && <button onClick={() => setDoomed(r)} className="rounded-lg bg-line/50 px-3 py-1.5 font-medium hover:bg-line">Delete</button>}
+              <Link href={`/dashboard/admin/roles/${r.id}`} className={btn}>{r.builtin || !owner ? "View" : "Edit"}</Link>
+              {!r.builtin && owner && <button onClick={() => setDoomed(r)} className={btn}>Delete</button>}
             </span></td>
           </tr>))}</tbody>
       </table>
-      {edit && (
-        <section className="border-t border-line pt-5">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-muted">{edit.id ? (edit.builtin ? `${cap(edit.name)}, built in` : `Edit ${edit.name}`) : "New role"}</h2>
-          {!edit.builtin && <div className="mt-4 max-w-xs"><Lbl>Name</Lbl><Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} aria-label="Role name" maxLength={40} placeholder="e.g. Analyst" /></div>}
-          <table className="mt-5 w-full max-w-xl text-sm">
-            <thead><tr className="text-xs text-muted"><th className="pb-2 text-left font-normal">Tab</th>{LETTERS.map(([k, n]) => <th key={k} className="pb-2 text-center font-normal">{n}</th>)}</tr></thead>
-            <tbody>{areas.map((a) => (
-              <tr key={a} className="border-t border-line"><td className="py-2.5">{AREAS[a] ?? a}</td>
-                {LETTERS.map(([k, n]) => <td key={k} className="text-center"><input type="checkbox" className="size-4 accent-[var(--accent)]" aria-label={`${AREAS[a] ?? a} ${n}`} checked={(edit.perms[a] ?? "").includes(k)} disabled={edit.builtin || !owner} onChange={() => toggle(a, k)} /></td>)}</tr>))}</tbody>
-          </table>
-          {err && <p role="alert" className="mt-4 text-sm text-red-500">{err}</p>}
-          <div className="mt-5 flex gap-2">
-            {!edit.builtin && owner && <Button onClick={save}>{edit.id ? "Save role" : "Create role"}</Button>}
-            <Button variant="ghost" onClick={() => setEdit(null)}>{edit.builtin || !owner ? "Close" : "Cancel"}</Button>
-          </div>
-        </section>)}
       <ConfirmDialog open={!!doomed} title={`Delete ${doomed?.name}?`} text="People with this role must be given another one first. This cannot be undone." confirm="Delete role"
         onClose={() => setDoomed(null)} onConfirm={() => remove(`/admin/roles/${doomed.id}`).then(load)} />
     </div>
@@ -290,6 +255,7 @@ export default function Admin() {
   const me = useMe();
   const [tab, setTab] = useState<(typeof TABS)[number]>("Users");
   const [s, setS] = useState<any>(null);
+  useEffect(() => { if (new URLSearchParams(location.search).get("tab") === "roles") setTab("Roles"); }, []); // coming back from a role page
   useEffect(() => { get("/admin/summary").then(setS).catch(() => {}); }, [tab]);
   if (me && !can(me, "admin")) return <p className="text-sm text-muted">Your role cannot open this page.</p>;
   return (
