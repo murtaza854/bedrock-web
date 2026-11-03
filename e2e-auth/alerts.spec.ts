@@ -31,4 +31,43 @@ test.describe("Sign-in alerts", () => {
     expect(mails(who.email).length).toBe(1);
     expect(copies(who.email).length).toBe(1);
   });
+
+  test("the owner can turn the alert emails off, or only the copy to owners, in Settings", async ({ request, owner, newPerson }) => {
+    const LINUX = "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0";
+    const set = (v: Record<string, string>) => owner.put(`${API}/admin/settings`, { data: v });
+    const signIn = async (who: { email: string; password: string }, ua: string) => {
+      expect((await request.post(`${API}/login`, { data: { email: who.email, password: who.password }, headers: { "User-Agent": ua } })).status()).toBe(204);
+      await request.post(`${API}/logout`, { data: {} });
+    };
+    const quiet = () => new Promise((r) => setTimeout(r, 700)); // time for a wrongly sent mail to show up
+    try {
+      // copy to owners off: the person is still told, the owner is not
+      expect((await set({ signin_alerts_owners: "0" })).ok()).toBeTruthy();
+      const a = await newPerson("viewer");
+      await signIn(a, MAC);
+      await signIn(a, WIN);
+      await expect.poll(() => mails(a.email).length).toBe(1);
+      await quiet();
+      expect(copies(a.email).length).toBe(0);
+
+      // alerts off: nobody is told, but the devices are still remembered
+      expect((await set({ signin_alerts_owners: "1", signin_alerts: "0" })).ok()).toBeTruthy();
+      const b = await newPerson("viewer");
+      await signIn(b, MAC);
+      await signIn(b, WIN);
+      await quiet();
+      expect(mails(b.email).length).toBe(0);
+      expect(copies(b.email).length).toBe(0);
+
+      // back on: a device seen while alerts were off does not alert; a really new one does
+      expect((await set({ signin_alerts: "1" })).ok()).toBeTruthy();
+      await signIn(b, WIN);
+      await quiet();
+      expect(mails(b.email).length).toBe(0);
+      await signIn(b, LINUX);
+      await expect.poll(() => mails(b.email).length).toBe(1);
+    } finally {
+      await set({ signin_alerts: "1", signin_alerts_owners: "1" });
+    }
+  });
 });

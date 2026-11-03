@@ -41,7 +41,7 @@ function Preferences({ owner }: { owner: boolean }) {
     setErrors(err);
     if (Object.keys(err).length) return;
     // a value equal to the default is stored as "no override", so the default can change later
-    const body = Object.fromEntries(dirty.map((x) => [x.key, x.kind === "number" && vals[x.key] === x.default ? "" : vals[x.key]]));
+    const body = Object.fromEntries(dirty.map((x) => [x.key, (x.kind === "number" || x.kind === "yesno") && vals[x.key] === x.default ? "" : vals[x.key]]));
     try { await put("/admin/settings", body); } catch (x) { return setErrors({ form: (x as Error).message }); }
     await reloadSettings(); await load(); setMsg("Saved. The whole app uses these now.");
   };
@@ -60,12 +60,12 @@ function Preferences({ owner }: { owner: boolean }) {
 
       <Section title="Your rules" note="the numbers behind the alerts and the warnings">
         <ul className="text-sm">
-          {defs.filter((x) => x.kind === "number").map((x) => (
+          {defs.filter((x) => x.kind === "number" || x.kind === "yesno").map((x) => (
             <li key={x.key} className="grid gap-x-8 gap-y-2 border-t border-line py-4 first:border-t-0 first:pt-0 sm:grid-cols-[1fr_15rem]">
               <div><p className="font-medium">{x.label}{x.changed && <span className="ml-2"><Badge tone="info">Changed</Badge></span>}</p><p className="mt-0.5 max-w-lg text-xs text-muted">{x.hint}</p></div>
               <div>
-                <div className="flex items-center gap-2"><div className="w-24"><Field type="number" min={x.min} max={x.max} value={vals[x.key] ?? ""} onChange={(e) => set(x.key, e.target.value)} disabled={!owner} error={errors[x.key]} /></div><span className="text-xs text-muted">{x.unit}</span></div>
-                <p className="mt-1.5 text-xs text-muted">Default {x.default}{vals[x.key] !== x.default && owner && <> · <button type="button" onClick={() => reset(x)} className="underline hover:text-ink">Use the default</button></>}</p>
+                <div className="flex items-center gap-2">{x.kind === "yesno" ? <div className="w-28"><Select label={x.label} value={vals[x.key] ?? ""} onChange={(v) => set(x.key, v)} options={[{ value: "1", label: "Yes" }, { value: "0", label: "No" }]} disabled={!owner} /></div> : <div className="w-24"><Field type="number" min={x.min} max={x.max} value={vals[x.key] ?? ""} onChange={(e) => set(x.key, e.target.value)} disabled={!owner} error={errors[x.key]} /></div>}<span className="text-xs text-muted">{x.unit}</span></div>
+                <p className="mt-1.5 text-xs text-muted">Default {x.kind === "yesno" ? (x.default === "1" ? "Yes" : "No") : x.default}{vals[x.key] !== x.default && owner && <> · <button type="button" onClick={() => reset(x)} className="underline hover:text-ink">Use the default</button></>}</p>
               </div>
             </li>
           ))}
