@@ -29,7 +29,7 @@ test.describe("Invitations", () => {
     await page.getByPlaceholder("Password", { exact: true }).fill("short");
     await page.getByPlaceholder("Repeat password").fill("short");
     await page.getByRole("button", { name: "Continue" }).click();
-    await expect(page.getByText("Use at least 12 characters", { exact: true })).toBeVisible();
+    await expect(page.getByText("Use at least 8 characters", { exact: true })).toBeVisible();
     await page.getByPlaceholder("Password", { exact: true }).fill("Walnut-bridge-4417");
     await page.getByPlaceholder("Repeat password").fill("Walnut-bridge-4417");
     await page.getByRole("button", { name: "Continue" }).click();

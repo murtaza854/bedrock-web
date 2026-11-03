@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { post } from "@/lib/api";
+import { PASSWORD_RULE, passwordProblem } from "@/lib/password";
 import { AuthCard } from "@/components/auth-card";
 import { Button } from "@/components/ui/button";
 import { Errors, Field } from "@/components/ui/field";
@@ -15,7 +16,7 @@ export function ResetForm({ token }: { token: string }) {
     const pw = String(f.get("password") ?? ""), again = String(f.get("again") ?? "");
     const err: Errors = {};
     if (!pw) err.password = "Enter a new password";
-    else if (pw.length < 12) err.password = "Use at least 12 characters";
+    else if (passwordProblem(pw)) err.password = passwordProblem(pw);
     if (!again) err.again = "Repeat the new password";
     else if (pw && again !== pw) err.again = "Passwords don't match";
     setErrors(err);
@@ -34,7 +35,7 @@ export function ResetForm({ token }: { token: string }) {
   return (
     <AuthCard onSubmit={submit}>
       <h1 className="text-2xl font-semibold tracking-tight">Set a new password</h1>
-      <p className="mb-2 text-sm text-muted">Use at least 12 characters.</p>
+      <p className="mb-2 text-sm text-muted">{PASSWORD_RULE}</p>
       <Field name="password" type="password" placeholder="New password" autoComplete="new-password" error={errors.password} />
       <Field name="again" type="password" placeholder="Repeat new password" autoComplete="new-password" error={errors.again} />
       <Button>Update password</Button>

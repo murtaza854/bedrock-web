@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { post } from "@/lib/api";
 import { resetMe } from "@/lib/auth";
+import { passwordProblem } from "@/lib/password";
 import { AuthCard } from "@/components/auth-card";
 import { Button } from "@/components/ui/button";
 import { Errors, Field } from "@/components/ui/field";
@@ -21,7 +22,7 @@ export function WelcomeForm({ token }: { token: string }) {
     const pw = String(f.get("password") ?? ""), again = String(f.get("again") ?? "");
     const err: Errors = {};
     if (!pw) err.password = "Choose a password";
-    else if (pw.length < 12) err.password = "Use at least 12 characters";
+    else if (passwordProblem(pw)) err.password = passwordProblem(pw);
     if (!again) err.again = "Repeat the password";
     else if (pw && again !== pw) err.again = "Passwords don't match";
     setErrors(err);
@@ -43,7 +44,7 @@ export function WelcomeForm({ token }: { token: string }) {
     <AuthCard onSubmit={submit}>
       <p className="text-xs text-muted">Step 1 of 3</p>
       <h1 className="text-2xl font-semibold tracking-tight">Welcome to Bedrock</h1>
-      <p className="mb-2 text-sm text-muted">Choose a password for {who.email}. Use at least 12 characters, and something you don&apos;t use anywhere else. Next you&apos;ll turn on two-factor sign-in.</p>
+      <p className="mb-2 text-sm text-muted">Choose a password for {who.email}: at least 8 characters, with an uppercase letter, a lowercase letter, a number and a symbol. Use something you don&apos;t use anywhere else. Next you&apos;ll turn on two-factor sign-in.</p>
       <Field name="password" type="password" placeholder="Password" autoComplete="new-password" error={errors.password} />
       <Field name="again" type="password" placeholder="Repeat password" autoComplete="new-password" error={errors.again} />
       <Button>Continue</Button>

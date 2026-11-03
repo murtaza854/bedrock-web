@@ -37,7 +37,7 @@ test.describe("Password", () => {
     await page.goto("/dashboard/account");
     await page.getByRole("button", { name: "Change password" }).click();
     await expect(page.getByText("Enter your current password")).toBeVisible();
-    await expect(page.getByText("Use at least 12 characters")).toBeVisible();
+    await expect(page.getByText("Use at least 8 characters")).toBeVisible();
     await page.locator('input[name="current"]').fill("Fresh-pass-12345");
     await page.locator('input[name="next"]').fill("Brand-new-pass-1");
     await page.locator('input[name="again"]').fill("Something-else-12");

@@ -51,7 +51,7 @@ test.describe("Sign-in safety", () => {
   test("weak passwords are refused when a person is added: too short, too common, or built from the email", async ({ owner }) => {
     const add = (email: string, password: string) => owner.post(`${API}/admin/users`, { data: { email, password, name: "", role: "viewer" } });
     const e = (n: string) => `${n}${Date.now()}@e2e.test`;
-    for (const [pw, why] of [["Shortpass-1", "at least 12"], ["Shortpass1", "at least 12"], ["Password123456!", "too common"], ["aaaaaaaaaaaaaaaa", "repetitive"]] as const) {
+    for (const [pw, why] of [["Sh0rt-1", "at least 8"], ["alllowercase-and-1", "uppercase letter"], ["NoSymbols1AtAll", "a symbol"], ["Password123456!", "too common"], ["Aa1!Aa1!Aa1!", "repetitive"]] as const) {
       const r = await add(e("weak"), pw);
       expect(r.status(), pw).toBe(400);
       expect(await r.text()).toContain(why);

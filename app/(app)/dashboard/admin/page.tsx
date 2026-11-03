@@ -4,6 +4,7 @@ import { del as remove, get, patch, post, put } from "@/lib/api";
 import { can, useMe } from "@/lib/auth";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { download, toCsv } from "@/lib/csv";
+import { passwordProblem } from "@/lib/password";
 import { cap } from "@/lib/plots";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,7 @@ function Users() {
   const setPassword = async (e: React.FormEvent<HTMLFormElement>, id: number) => {
     e.preventDefault();
     const p = String(new FormData(e.currentTarget).get("password") ?? "");
-    if (p.length < 12) return setErrors({ pw: "Use at least 12 characters" });
+    if (passwordProblem(p)) return setErrors({ pw: passwordProblem(p) });
     setErrors({}); act(() => post(`/admin/users/${id}/password`, { password: p }), "Password set. They were signed out everywhere.");
   };
   if (!rows) return null;

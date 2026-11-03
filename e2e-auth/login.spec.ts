@@ -100,12 +100,12 @@ test.describe("Forgot and reset password", () => {
     await page.getByPlaceholder("New password", { exact: true }).fill("short");
     await page.getByPlaceholder("Repeat new password").fill("short");
     await page.getByRole("button", { name: "Update password" }).click();
-    await expect(page.getByText("Use at least 12 characters", { exact: true })).toBeVisible();
-    await page.getByPlaceholder("New password", { exact: true }).fill("a-long-enough-pass");
-    await page.getByPlaceholder("Repeat new password").fill("a-different-pass1");
+    await expect(page.getByText("Use at least 8 characters", { exact: true })).toBeVisible();
+    await page.getByPlaceholder("New password", { exact: true }).fill("A-long-enough-pass1");
+    await page.getByPlaceholder("Repeat new password").fill("A-different-pass1");
     await page.getByRole("button", { name: "Update password" }).click();
     await expect(page.getByText("Passwords don't match")).toBeVisible();
-    await page.getByPlaceholder("Repeat new password").fill("a-long-enough-pass");
+    await page.getByPlaceholder("Repeat new password").fill("A-long-enough-pass1");
     await page.getByRole("button", { name: "Update password" }).click();
     await expect(page.getByText("expired or was already used")).toBeVisible(); // this token was never issued
   });

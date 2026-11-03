@@ -86,7 +86,7 @@ test.describe("People", () => {
     await row(page, who.email).getByRole("button", { name: "Set password" }).click();
     await page.getByPlaceholder("New password").fill("short");
     await page.getByRole("button", { name: "Set", exact: true }).click();
-    await expect(page.getByText("Use at least 12 characters")).toBeVisible();
+    await expect(page.getByText("Use at least 8 characters")).toBeVisible();
     await page.getByPlaceholder("New password").fill("Reset-by-owner-1");
     await page.getByRole("button", { name: "Set", exact: true }).click();
     await expect(page.getByRole("status")).toContainText("Password set. They were signed out everywhere.");

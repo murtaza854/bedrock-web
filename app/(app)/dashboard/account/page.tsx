@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { del, get, post } from "@/lib/api";
 import { resetMe, useMe } from "@/lib/auth";
 import { addPasskey, passkeysSupported } from "@/lib/passkey";
+import { passwordProblem } from "@/lib/password";
 import { cap } from "@/lib/plots";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ function Password() {
     const el = e.currentTarget, f = Object.fromEntries(new FormData(el)) as Record<string, string>;
     const err: Errors = {};
     if (!f.current) err.current = "Enter your current password";
-    if (f.next.length < 12) err.next = "Use at least 12 characters";
+    if (passwordProblem(f.next)) err.next = passwordProblem(f.next);
     if (f.again !== f.next) err.again = "The two passwords don't match";
     setErrors(err); setDone(false);
     if (Object.keys(err).length) return;
