@@ -13,7 +13,8 @@ export default function Login() {
   const [errors, setErrors] = useState<Errors>({});
   const [challenge, setChallenge] = useState<string | null>(null);
   const [canPasskey, setCanPasskey] = useState(false);
-  useEffect(() => { setCanPasskey(passkeysSupported()); }, []);
+  const [passwords, setPasswords] = useState(true); // false when the owner turned passwords off: passkeys only
+  useEffect(() => { setCanPasskey(passkeysSupported()); fetch(API + "/config").then((r) => r.json()).then((c) => setPasswords(c.passwords !== false)).catch(() => {}); }, []);
   const withPasskey = async () => { const m = await signInWithPasskey(); if (m) setErrors({ form: m }); else location.href = "/dashboard"; };
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -47,6 +48,15 @@ export default function Login() {
       <Field name="code" placeholder="123456" autoComplete="one-time-code" inputMode="text" autoFocus error={errors.form} />
       <Button>Verify</Button>
       <button type="button" onClick={() => { setChallenge(null); setErrors({}); }} className="text-center text-sm text-muted hover:text-ink">Back to log in</button>
+    </AuthCard>
+  );
+  if (!passwords) return (
+    <AuthCard>
+      <h1 className="text-2xl font-semibold tracking-tight">Bedrock</h1>
+      <p className="mb-2 text-sm text-muted">Sign in with your passkey: your fingerprint, face or device PIN.</p>
+      {canPasskey ? <Button type="button" onClick={withPasskey}>Sign in with a passkey</Button> : <p className="text-sm text-muted">This browser can&apos;t use passkeys. Open Bedrock in a recent Chrome, Safari or Firefox.</p>}
+      {errors.form && <p role="alert" className="text-sm text-red-500">{errors.form}</p>}
+      <p className="text-center text-xs text-muted">Lost your passkeys? Ask the person who runs Bedrock for a new invitation link.</p>
     </AuthCard>
   );
   return (

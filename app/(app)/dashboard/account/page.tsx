@@ -87,9 +87,9 @@ export default function Account() {
         <p className="rounded-xl bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">Login is switched off while you build (<code>DEV_NO_AUTH</code>), so there is no password, two-factor or session to manage. Everyone is treated as an owner. Run the API with <code>make run DEV_NO_AUTH=0</code> to use real accounts.</p>
       ) : (
         <>
-          <Section title="Password"><Password /></Section>
-          <Section title="Two-factor sign-in (authenticator app)" note={m.passkeys && !m.totp_enabled ? "You have a passkey, which already counts as two-factor. The app is optional." : undefined}><TwoFactor on={m.totp_enabled} reload={() => setTick((t) => t + 1)} /></Section>
-          <Section title="Passkeys"><Passkeys /></Section>
+          {m.passwords !== false && <Section title="Password"><Password /></Section>}
+          {m.passwords !== false && <Section title="Two-factor sign-in (authenticator app)" note={m.passkeys && !m.totp_enabled ? "You have a passkey, which already counts as two-factor. The app is optional." : undefined}><TwoFactor on={m.totp_enabled} reload={() => setTick((t) => t + 1)} /></Section>}
+          <Section title="Passkeys" note={m.passwords === false ? `Passwords are turned off. You sign in with a passkey, and you need ${m.passkeys_needed ?? 1}.` : undefined}><Passkeys /></Section>
           <Section title="Where you're signed in"><Sessions /></Section>
         </>
       )}

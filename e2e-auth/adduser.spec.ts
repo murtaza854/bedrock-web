@@ -32,10 +32,10 @@ test.describe("make adduser", () => {
       expect(run(db, ["not-an-email"]).stderr).toContain("valid email");
       expect(psql(db, "select count(*) from users")).toBe("0"); // none of that created anyone
 
-      const ok = run(db, ["First@E2E.test"]);
+      const ok = run(db, ["First@E2E.test", "owner", "  First Owner  "]);
       expect(ok.status, ok.stderr).toBe(0);
       expect(ok.stderr).toMatch(/\/welcome\?token=[0-9a-f]{20,}/);
-      expect(psql(db, "select email || ' ' || role || ' ' || onboarding || ' ' || (password_hash = '!') from users")).toBe("first@e2e.test owner true true");
+      expect(psql(db, "select email || ' ' || role || ' ' || onboarding || ' ' || (password_hash = '!') || ' ' || name from users")).toBe("first@e2e.test owner true true First Owner"); // the name is kept, trimmed
       expect(psql(db, "select count(*) from audit_log where action like 'first owner created%'")).toBe("1");
       const again = run(db, ["second@e2e.test"]);
       expect(again.status).not.toBe(0);

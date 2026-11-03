@@ -29,7 +29,9 @@ export default function Onboarding() {
     </main>
   );
   if (!me || !me.must_setup_2fa) return null;
-  const done = me.totp_enabled || !!me.passkeys;
+  const passkeysOnly = me.passwords === false; // passwords are off: only passkeys count, and an owner needs two
+  const need = me.passkeys_needed ?? 1;
+  const done = passkeysOnly ? (me.passkeys ?? 0) >= need : me.totp_enabled || !!me.passkeys;
   const finish = async () => {
     setErr("");
     try { await post("/account/onboarding/finish", {}); setFinished(true); resetMe(); } catch (x) { setErr((x as Error).message); }
@@ -41,19 +43,19 @@ export default function Onboarding() {
         <div>
           <p className="text-xs text-muted">Step 2 of 3</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">Secure your account</h1>
-          <p className="mt-2 text-sm text-muted">Choose at least one way to prove it&apos;s you when you sign in. You can set up both, or skip one. Bedrock opens when you finish.</p>
+          <p className="mt-2 text-sm text-muted">{passkeysOnly ? `Bedrock signs you in with a passkey. You need ${need}${need > 1 ? ": add one for each device you use, so losing one never locks you out" : ""}. Bedrock opens when you finish.` : "Choose at least one way to prove it's you when you sign in. You can set up both, or skip one. Bedrock opens when you finish."}</p>
         </div>
         <section className="rounded-xl border border-line p-5">
-          <h2 className="flex items-center gap-3 text-sm font-medium">Passkey <span className="text-xs font-normal text-muted">the easiest</span>{!!me.passkeys && <Badge tone="good">Done</Badge>}</h2>
+          <h2 className="flex items-center gap-3 text-sm font-medium">Passkey <span className="text-xs font-normal text-muted">{passkeysOnly ? `${me.passkeys ?? 0} of ${need}` : "the easiest"}</span>{done && passkeysOnly || (!passkeysOnly && !!me.passkeys) ? <Badge tone="good">Done</Badge> : null}</h2>
           <div className="mt-4"><Passkeys /></div>
         </section>
-        <section className="rounded-xl border border-line p-5">
+        {!passkeysOnly && <section className="rounded-xl border border-line p-5">
           <h2 className="flex items-center gap-3 text-sm font-medium">Authenticator app{me.totp_enabled && <Badge tone="good">Done</Badge>}</h2>
           <div className="mt-4"><TwoFactor on={me.totp_enabled} reload={resetMe} onCodes={setCodesOpen} /></div>
-        </section>
+        </section>}
         <div className="flex flex-wrap items-center gap-4">
           <Button disabled={!done || codesOpen} onClick={finish}>Finish</Button>
-          {!done && <p className="text-sm text-muted">Set up a passkey or the authenticator app to continue.</p>}
+          {!done && <p className="text-sm text-muted">{passkeysOnly ? `Add ${need - (me.passkeys ?? 0)} more passkey${need - (me.passkeys ?? 0) > 1 ? "s" : ""} to continue.` : "Set up a passkey or the authenticator app to continue."}</p>}
           {done && codesOpen && <p className="text-sm text-muted">Save your backup codes first.</p>}
           {err && <p role="alert" className="text-sm text-red-500">{err}</p>}
         </div>

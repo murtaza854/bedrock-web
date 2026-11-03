@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { post } from "@/lib/api";
 import { resetMe } from "@/lib/auth";
 import { passwordProblem } from "@/lib/password";
+import { passkeysSupported, signUpWithPasskey } from "@/lib/passkey";
 import { AuthCard } from "@/components/auth-card";
 import { Button } from "@/components/ui/button";
 import { Errors, Field } from "@/components/ui/field";
@@ -12,7 +13,7 @@ import { Errors, Field } from "@/components/ui/field";
 // Step 1 of 3 of getting started: choose a password. Step 2 (a passkey or the authenticator app) is the setup wizard, which is the only page that opens until they finish.
 export function WelcomeForm({ token }: { token: string }) {
   const router = useRouter();
-  const [who, setWho] = useState<{ email: string; name: string } | null>(null);
+  const [who, setWho] = useState<{ email: string; name: string; passwords?: boolean } | null>(null);
   const [bad, setBad] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   useEffect(() => { post("/invite/lookup", { token }).then(setWho).catch((x) => setBad((x as Error).message)); }, [token]);
@@ -40,6 +41,23 @@ export function WelcomeForm({ token }: { token: string }) {
       </AuthCard>
     );
   if (!who) return <AuthCard><p className="text-sm text-muted">Checking your invitation…</p></AuthCard>;
+  if (who.passwords === false) { // passwords are off: the first passkey takes the place of a password
+    const make = async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      const m = await signUpWithPasskey(token, String(new FormData(e.currentTarget).get("name") ?? "").trim());
+      if (m) return setErrors({ password: m });
+      resetMe();
+      router.replace("/onboarding");
+    };
+    return (
+      <AuthCard onSubmit={make}>
+        <p className="text-xs text-muted">Step 1 of 3</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Welcome to Bedrock</h1>
+        <p className="mb-2 text-sm text-muted">You sign in to Bedrock with a passkey for {who.email}: your fingerprint, face or device PIN. There is no password. Make your first one now.</p>
+        {passkeysSupported() ? <><Field name="name" placeholder="Name, e.g. MacBook" error={errors.password} /><Button>Set up a passkey</Button></> : <p className="text-sm text-muted">This browser can&apos;t make passkeys. Open this link in a recent Chrome, Safari or Firefox.</p>}
+      </AuthCard>
+    );
+  }
   return (
     <AuthCard onSubmit={submit}>
       <p className="text-xs text-muted">Step 1 of 3</p>

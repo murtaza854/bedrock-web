@@ -89,7 +89,7 @@ function Users() {
                   <span className="flex flex-wrap justify-end gap-x-4 gap-y-1 text-muted">
                     {u.invited && <button onClick={() => act(async () => showInvite(u.email, await post(`/admin/users/${u.id}/invite`, {})))} className="hover:text-ink">Email a new invite</button>}
                     {u.invited && <button onClick={() => act(() => copyLink(u))} className="hover:text-ink">Copy link</button>}
-                    <button onClick={() => { setErrors({}); setPw(u.id); }} className="hover:text-ink">Set password</button>
+                    {me?.passwords !== false && <button onClick={() => { setErrors({}); setPw(u.id); }} className="hover:text-ink">Set password</button>}
                     {u.totp_enabled && <button onClick={() => setConfirm(`${u.id}:2fa`)} className="hover:text-ink">Reset two-factor</button>}
                     {!!u.passkeys && <button onClick={() => setConfirm(`${u.id}:keys`)} className="hover:text-ink">Remove passkeys</button>}
                     {!self && <button onClick={() => setConfirm(`${u.id}:off`)} className="hover:text-ink">{off ? "Switch on" : "Switch off"}</button>}

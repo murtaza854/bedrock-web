@@ -24,3 +24,17 @@ export async function signInWithPasskey(): Promise<string> {
   const done = await send(`/login/passkey/finish?id=${encodeURIComponent(id)}`, cred.toJSON());
   return done?.ok ? "" : !done ? "Can't reach the server" : done.status === 429 ? (await done.text()).trim() : "That passkey was not accepted";
 }
+
+// From an invitation link, when passwords are off: make the first passkey instead of choosing a password. This signs the person in.
+// Returns an error message, or "" when it worked.
+export async function signUpWithPasskey(token: string, name: string): Promise<string> {
+  const send = (p: string, b: unknown) => fetch(API + p, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).catch(() => null);
+  const begin = await send("/invite/passkey/begin", { token });
+  if (!begin?.ok) return !begin ? "Can't reach the server" : (await begin.text()).trim() || "Could not start";
+  const opts = await begin.json();
+  let cred: PublicKeyCredential | null;
+  try { cred = (await navigator.credentials.create({ publicKey: pk()!.parseCreationOptionsFromJSON(opts.publicKey) })) as PublicKeyCredential | null; } catch { return "No passkey was created"; }
+  if (!cred) return "No passkey was created";
+  const done = await send(`/invite/passkey/finish?token=${encodeURIComponent(token)}&name=${encodeURIComponent(name)}`, cred.toJSON());
+  return done?.ok ? "" : !done ? "Can't reach the server" : (await done.text()).trim() || "That passkey could not be added";
+}

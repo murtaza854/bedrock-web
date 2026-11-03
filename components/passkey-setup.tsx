@@ -34,7 +34,7 @@ export function Passkeys() {
         <form onSubmit={add} noValidate className="mt-4 flex max-w-md items-start gap-3"><Field name="name" placeholder="Name, e.g. MacBook" /><Button>Add a passkey</Button></form>
       ) : <p className="mt-4 text-sm text-muted">This browser can't make passkeys. Use a recent Chrome, Safari or Firefox.</p>}
       {err && <p role="alert" className="mt-3 text-sm text-red-500">{err}</p>}
-      {me?.must_setup_2fa && <p className="mt-3 text-xs text-muted">A passkey is enough: you don't also need the authenticator app.</p>}
+      {me?.must_setup_2fa && me.passwords !== false && <p className="mt-3 text-xs text-muted">A passkey is enough: you don't also need the authenticator app.</p>}
     </div>
   );
 }

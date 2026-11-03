@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { get } from "./api";
 
-export type Me = { email: string; role: string; perms: Record<string, string>; name: string; totp_enabled: boolean; passkeys?: number; must_setup_2fa?: boolean; onboarding?: boolean; dev: boolean };
+export type Me = { email: string; role: string; perms: Record<string, string>; name: string; totp_enabled: boolean; passkeys?: number; passkeys_needed?: number; passwords?: boolean; must_setup_2fa?: boolean; onboarding?: boolean; dev: boolean };
 
 let cached: Promise<Me> | null = null;
 export const loadMe = () => (cached ??= get("/me").catch((e) => { cached = null; throw e; }));
