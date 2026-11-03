@@ -246,4 +246,25 @@ test.describe("Backups", () => {
     expect(dl.status()).toBe(200);
     expect((await dl.body()).length).toBeGreaterThan(1000); // an encrypted database dump, not an empty file
   });
+
+  test("only an owner can rename other people: the owner does it in the list, anyone else is refused", async ({ as, owner, newPerson }) => {
+    const target = await newPerson("viewer");
+    const { page } = await as(PEOPLE.owner);
+    await page.goto("/dashboard/admin");
+    await row(page, target.email).getByRole("button", { name: "Rename" }).click();
+    await page.getByLabel(`Name of ${target.email}`).fill("Renamed By Owner");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByRole("status")).toHaveText("Name saved");
+    await expect(row(page, target.email)).toContainText("Renamed By Owner");
+
+    // a role that may use the Admin area is still not an owner
+    const role = `Adminish${Date.now()}`;
+    expect((await owner.post(`${API}/admin/roles`, { data: { name: role, perms: { plots: "r", admin: "ru" } } })).ok()).toBeTruthy();
+    const helper = await newPerson(role);
+    const them = await as(helper);
+    const id = (await (await owner.get(`${API}/admin/users`)).json()).find((u: any) => u.email === target.email).id;
+    const refused = await them.request.patch(`${API}/admin/users/${id}`, { data: { name: "Nope" } });
+    expect(refused.status()).toBe(403);
+    expect(await refused.text()).toContain("only an owner");
+  });
 });

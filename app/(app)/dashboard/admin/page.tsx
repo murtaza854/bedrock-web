@@ -28,6 +28,7 @@ function Users() {
   const [rows, setRows] = useState<any[] | null>(null);
   const [add, setAdd] = useState(false);
   const [pw, setPw] = useState<number | null>(null);
+  const [rename, setRename] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
   const [errors, setErrors] = useState<Errors>({});
   const [role, setRole] = useState("editor");
@@ -36,7 +37,7 @@ function Users() {
   const [msg, setMsg] = useState("");
   const load = () => get("/admin/users").then(setRows);
   useEffect(() => { load(); }, []);
-  const act = async (fn: () => Promise<unknown>, ok = "") => { setMsg(""); try { await fn(); setConfirm(null); setPw(null); if (ok) setMsg(ok); load(); } catch (x) { setMsg((x as Error).message); } };
+  const act = async (fn: () => Promise<unknown>, ok = "") => { setMsg(""); try { await fn(); setConfirm(null); setPw(null); setRename(null); if (ok) setMsg(ok); load(); } catch (x) { setMsg((x as Error).message); } };
 
   const create = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -81,12 +82,15 @@ function Users() {
               <td>{u.totp_enabled || u.passkeys ? <Badge tone="good">{u.totp_enabled && u.passkeys ? "App + passkey" : u.passkeys ? "Passkey" : "App"}</Badge> : <Badge tone="warn">Off</Badge>}</td>
               <td className="text-right text-muted">{when(u.last_login_at)}</td>
               <td className="pl-4 text-right text-xs">
-                {pw === u.id ? (
+                {rename === u.id ? (
+                  <form onSubmit={(e) => { e.preventDefault(); const name = String(new FormData(e.currentTarget).get("name") ?? ""); act(() => patch(`/admin/users/${u.id}`, { name }), "Name saved"); }} noValidate className="flex items-center justify-end gap-2"><Input name="name" defaultValue={u.name} placeholder="Name" maxLength={100} aria-label={`Name of ${u.email}`} className="!py-1 text-xs" autoFocus /><button className="text-ink">Save</button><button type="button" onClick={() => setRename(null)} className="text-muted">Cancel</button></form>
+                ) : pw === u.id ? (
                   <form onSubmit={(e) => setPassword(e, u.id)} noValidate className="flex items-center justify-end gap-2"><div><Input name="password" type="password" placeholder="New password" aria-invalid={!!errors.pw} className="!py-1 text-xs" autoFocus />{errors.pw && <p role="alert" className="mt-1 text-red-500">{errors.pw}</p>}</div><button className="text-ink">Set</button><button type="button" onClick={() => setPw(null)} className="text-muted">Cancel</button></form>
                 ) : confirm?.startsWith(`${u.id}:`) ? (
                   <span><button onClick={() => act(() => confirm.endsWith("2fa") ? post(`/admin/users/${u.id}/reset-2fa`, {}) : confirm.endsWith("keys") ? post(`/admin/users/${u.id}/remove-passkeys`, {}) : patch(`/admin/users/${u.id}`, { disabled: !off }), confirm.endsWith("2fa") ? "Two-factor reset. They can set it up again." : confirm.endsWith("keys") ? "Passkeys removed. They were signed out, and must set up a passkey or the app to get back in." : "")} className="text-red-500">Confirm</button><button onClick={() => setConfirm(null)} className="ml-3 text-muted">Cancel</button></span>
                 ) : (
                   <span className="flex flex-wrap justify-end gap-x-4 gap-y-1 text-muted">
+                    {me?.role === "owner" && <button onClick={() => { setErrors({}); setRename(u.id); }} className="hover:text-ink">Rename</button>}
                     {u.invited && <button onClick={() => act(async () => showInvite(u.email, await post(`/admin/users/${u.id}/invite`, {})))} className="hover:text-ink">Email a new invite</button>}
                     {u.invited && <button onClick={() => act(() => copyLink(u))} className="hover:text-ink">Copy link</button>}
                     {me?.passwords !== false && <button onClick={() => { setErrors({}); setPw(u.id); }} className="hover:text-ink">Set password</button>}

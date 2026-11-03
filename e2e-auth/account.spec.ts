@@ -202,3 +202,18 @@ test.describe("Two-factor sign-in", () => {
     await expect(p2).toHaveURL(/\/dashboard$/); // no code asked for
   });
 });
+
+test.describe("Your name", () => {
+  test("anyone can change their own name on Account, and it shows in the header and in /me", async ({ as, newPerson }) => {
+    const who = await newPerson("viewer");
+    const { page, request } = await as(who);
+    await page.goto("/dashboard/account");
+    await page.getByLabel("Your name").fill("  Taylor Test  ");
+    await page.getByRole("button", { name: "Save name" }).click();
+    await expect(page.getByRole("status")).toHaveText("Saved");
+    expect((await (await request.get(`${API}/me`)).json()).name).toBe("Taylor Test"); // trimmed
+    await page.reload();
+    await expect(page.getByLabel("Your name")).toHaveValue("Taylor Test");
+    await expect(page.getByText(`Taylor Test · ${who.email}`)).toBeVisible();
+  });
+});
