@@ -31,6 +31,18 @@ test.describe("Log in", () => {
     await expect(page.getByText("Wrong email or password")).toBeVisible();
   });
 
+  test("the eye button shows and hides the typed password", async ({ page }) => {
+    await page.goto("/login");
+    const box = page.getByPlaceholder("Password");
+    await box.fill("Hunter2-hunter2-x");
+    await expect(box).toHaveAttribute("type", "password");
+    await page.getByRole("button", { name: "Show password" }).click();
+    await expect(box).toHaveAttribute("type", "text");
+    await expect(box).toHaveValue("Hunter2-hunter2-x"); // what was typed is still there
+    await page.getByRole("button", { name: "Hide password" }).click();
+    await expect(box).toHaveAttribute("type", "password");
+  });
+
   test("signing in lands on the dashboard; Log out ends the session", async ({ page }) => {
     await page.goto("/login");
     await fill(page, PEOPLE.viewer.email, PEOPLE.viewer.password);
